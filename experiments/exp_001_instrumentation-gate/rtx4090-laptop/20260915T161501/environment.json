@@ -1,0 +1,136 @@
+{
+  "cpu": {
+    "logical_cores": 32,
+    "model": "Intel(R) Core(TM) i9-14900HX"
+  },
+  "environment_variables": {
+    "CUBLAS_WORKSPACE_CONFIG": null,
+    "CUDA_VISIBLE_DEVICES": null,
+    "MKL_NUM_THREADS": null,
+    "NVIDIA_VISIBLE_DEVICES": null,
+    "OMP_NUM_THREADS": null,
+    "SLURM_CPUS_PER_TASK": null,
+    "SLURM_GPUS_ON_NODE": null,
+    "SLURM_JOB_GPUS": null,
+    "SLURM_JOB_ID": null,
+    "SLURM_JOB_NAME": null,
+    "SLURM_JOB_NODELIST": null,
+    "SLURM_JOB_PARTITION": null,
+    "SLURM_MEM_PER_NODE": null,
+    "SLURM_NTASKS": null,
+    "SLURM_STEP_GPUS": null,
+    "TOMLML_NVML_UUID": null,
+    "TOMLML_PLATFORM_TAG": null,
+    "TORCH_CUDNN_V8_API_LRU_CACHE_LIMIT": null
+  },
+  "git": {
+    "branch": "main",
+    "commit": "4024f72d5f315eaf0987a24355aba95f92160706",
+    "dirty": false,
+    "error": null,
+    "root": "E:\\data\\code\\claudecode\\mlpowermeter"
+  },
+  "hostname": "muntaserPC2024",
+  "nvml": {
+    "available": true,
+    "cuda_driver_version": 13020,
+    "cuda_driver_version_error": null,
+    "cuda_driver_version_str": "13.2",
+    "devices": [
+      {
+        "error": null,
+        "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+        "nvml_index": 0,
+        "pci_bus_id": "00000000:01:00.0",
+        "uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734"
+      }
+    ],
+    "driver_version": "595.79",
+    "driver_version_error": null,
+    "nvml_version": "13.595.79",
+    "nvml_version_error": null,
+    "target_device_state": {
+      "resolved": {
+        "method": "torch_uuid",
+        "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+        "notes": [],
+        "nvml_index": 0,
+        "pci_bus_id": "00000000:01:00.0",
+        "torch_index": 0,
+        "torch_name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+        "torch_uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+        "uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+        "uuid_verified": true
+      },
+      "state": {
+        "energy_mj": 19628837,
+        "mem_clock_mhz": 9001,
+        "power_w": 593.506,
+        "sm_clock_mhz": 1455,
+        "temperature_c": 44,
+        "throttle_mask": 1,
+        "throttle_reasons": [
+          "GpuIdle"
+        ]
+      }
+    }
+  },
+  "os": {
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "release": "11",
+    "system": "Windows",
+    "version": "10.0.26200"
+  },
+  "packages": {
+    "cuml": null,
+    "cupy": null,
+    "gymnasium": "1.3.0",
+    "lightgbm": "4.6.0",
+    "numpy": "2.0.2",
+    "nvidia-ml-py": "13.595.45",
+    "pandas": "2.3.3",
+    "pynvml": "13.0.1",
+    "pyyaml": "6.0.3",
+    "scikit-learn": "1.5.2",
+    "scipy": "1.17.1",
+    "stable-baselines3": null,
+    "tomlml": "0.1.0",
+    "torch": "2.6.0+cu124",
+    "torchaudio": "2.6.0+cu124",
+    "torchvision": "0.21.0+cu124",
+    "triton": null,
+    "xgboost": "2.1.4"
+  },
+  "python": {
+    "executable": "C:\\Users\\User\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "implementation": "CPython",
+    "version": "3.12.2"
+  },
+  "ram_gb": 95.71,
+  "timestamp_local": "2026-09-15T16:15:01-04:00",
+  "timestamp_utc": "2026-09-15T20:15:01+00:00",
+  "torch": {
+    "cuda_available": true,
+    "cuda_version": "12.4",
+    "cudnn_allow_tf32": true,
+    "cudnn_benchmark": false,
+    "cudnn_version": 90100,
+    "deterministic_algorithms": false,
+    "device_count": 1,
+    "devices": [
+      {
+        "compute_capability": "8.9",
+        "index": 0,
+        "multi_processor_count": 76,
+        "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+        "total_memory_bytes": 17170956288,
+        "uuid": "a19463b0-61fe-b2f4-c5fe-0463d481b734"
+      }
+    ],
+    "float32_matmul_precision": "highest",
+    "installed": true,
+    "matmul_allow_tf32": false,
+    "version": "2.6.0+cu124"
+  }
+}

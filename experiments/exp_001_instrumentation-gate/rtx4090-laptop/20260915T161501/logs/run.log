@@ -1,0 +1,41 @@
+2026-09-15 16:15:01,049 INFO EXP-001 instrumentation-gate on rtx4090-laptop (run 20260915T161501) -> E:\data\code\claudecode\mlpowermeter\experiments\exp_001_instrumentation-gate\rtx4090-laptop\20260915T161501
+2026-09-15 16:15:01,049 INFO device: nvml index 0, NVIDIA GeForce RTX 4090 Laptop GPU, uuid gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734, resolved by torch_uuid, uuid_verified=True
+2026-09-15 16:15:01,194 INFO S0 capabilities: probing NVML
+2026-09-15 16:15:01,213 INFO   counter supported=True driver=595.79 enforced_limit=175.0 W
+2026-09-15 16:15:01,213 INFO S1 resolution: polling sensor at idle for 0.5 s
+2026-09-15 16:15:01,932 INFO S1 resolution: polling sensor under load for 0.5 s
+2026-09-15 16:15:08,468 INFO   counter update period under load: median 100.13530000287574 ms (idle 99.97934999410063 ms); poll rate 760 Hz
+2026-09-15 16:15:08,474 INFO S2 idle_pre: waiting for thermal settle (timeout 15 s)
+2026-09-15 16:15:16,478 INFO   settled at 46 C after 8.0 s (timed_out=False); idle baseline 3.0 s
+2026-09-15 16:15:19,484 INFO   idle power 4.00 W (std 0.03), drift 2.155 W/min
+2026-09-15 16:15:19,484 INFO S3 thermal: heat load for 3.0 s
+2026-09-15 16:15:28,304 INFO   heat: 151.4 W mean, max 65 C, sm clock 1641 MHz, throttle ['GpuIdle', 'SwPowerCap']; settling
+2026-09-15 16:15:41,316 INFO   settled after 10.0 s (timed_out=False); post-heat idle 4.13 W (bias +0.13 W)
+2026-09-15 16:15:41,316 INFO S4 repeatability [matmul_large]: warmup 1.5 s, then 3 blocks of 0.5 s
+2026-09-15 16:15:49,524 INFO   calibrated 5.708 ms per call -> 88 calls per block
+2026-09-15 16:15:50,032 INFO   block 00: 0.503 s, 175.0 W, 1.435 J/call (counter), monotonic=True, throttle=['SwPowerCap']
+2026-09-15 16:15:50,535 INFO   block 01: 0.502 s, 175.0 W, 1.568 J/call (counter), monotonic=True, throttle=['SwPowerCap']
+2026-09-15 16:15:51,048 INFO   block 02: 0.503 s, 175.1 W, 1.443 J/call (counter), monotonic=False, throttle=['SwPowerCap']
+2026-09-15 16:15:51,048 INFO   repeatability [matmul_large]: mean 1.482 J/call, CV 0.0502, counter vs integral max |rel| 0.5713978953990149
+2026-09-15 16:15:51,048 INFO S5 window_sufficiency [matmul_large]: lengths [0.5, 1.0, 2.0, 5.0, 10.0, 20.0] x 2 reps, randomized order
+2026-09-15 16:17:06,974 INFO   window sufficiency [matmul_large]: CV by length {'0.5': 1.4142, '1': 0.1061, '2': 0.5004, '5': 0.1882, '10': 0.0714, '20': 0.0017}; smallest sufficient window 20.0 s
+2026-09-15 16:17:06,985 INFO S4 repeatability [matmul_tiny_loop]: warmup 1.5 s, then 3 blocks of 0.5 s
+2026-09-15 16:17:09,224 INFO   calibrated 0.017 ms per call -> 29505 calls per block
+2026-09-15 16:17:09,767 INFO   block 00: 0.538 s, 63.6 W, 0.002983 J/call (counter), monotonic=True, throttle=['GpuIdle']
+2026-09-15 16:17:10,312 INFO   block 01: 0.541 s, 63.3 W, 0.002997 J/call (counter), monotonic=True, throttle=['GpuIdle']
+2026-09-15 16:17:10,826 INFO   block 02: 0.510 s, 62.8 W, 0.003527 J/call (counter), monotonic=True, throttle=['GpuIdle']
+2026-09-15 16:17:10,826 INFO   repeatability [matmul_tiny_loop]: mean 0.003169 J/call, CV 0.0979, counter vs integral max |rel| 2.2483128470765394
+2026-09-15 16:17:10,826 INFO S5 window_sufficiency [matmul_tiny_loop]: lengths [0.5, 1.0, 2.0, 5.0, 10.0, 20.0] x 2 reps, randomized order
+2026-09-15 16:17:16,084 INFO   window sufficiency [matmul_tiny_loop]: CV by length {'0.5': 1.4142, '1': None, '2': 0.0566, '5': 0.4805, '10': 0.0665, '20': 0.1223}; smallest sufficient window None s
+2026-09-15 16:17:16,084 INFO   FAIL C1_counter_supported_and_monotonic (value={'supported': True, 'monotonic': False} threshold={'supported': True, 'monotonic': True})
+2026-09-15 16:17:16,084 INFO   PASS C2_counter_update_period_ms (value=100.13530000287574 threshold=200)
+2026-09-15 16:17:16,084 INFO   FAIL C3_counter_vs_power_integral_rel (value=2.2483128470765394 threshold=0.05)
+2026-09-15 16:17:16,084 INFO   FAIL C4_repeatability_cv_matmul_large (value=0.05020844332616701 threshold=0.03)
+2026-09-15 16:17:16,084 INFO   FAIL C4_repeatability_cv_matmul_tiny_loop (value=0.09785824090567503 threshold=0.05)
+2026-09-15 16:17:16,084 INFO   PASS C5_thermal_settle_before_timeout (value=10.008029100004933 threshold=15.0)
+2026-09-15 16:17:16,084 INFO   PASS C6_no_foreign_compute_processes (value=0 threshold=0)
+2026-09-15 16:17:16,084 INFO   FAIL C7_min_sufficient_window_s_matmul_large (value=20.0 threshold=10)
+2026-09-15 16:17:16,084 INFO   PASS C8_no_forbidden_throttle_reasons (value=[] threshold=['HwPowerBrakeSlowdown', 'HwSlowdown', 'HwThermalSlowdown', 'SwThermalSlowdown'])
+2026-09-15 16:17:16,084 INFO   PASS C9_device_uuid_verified (value=True threshold=True)
+2026-09-15 16:17:16,084 INFO GATE FAIL (QUICK RUN, NOT VALID FOR THE GATE) in 135 s
+2026-09-15 16:17:16,084 INFO status completed; manifest E:\data\code\claudecode\mlpowermeter\experiments\exp_001_instrumentation-gate\rtx4090-laptop\20260915T161501\manifest.json

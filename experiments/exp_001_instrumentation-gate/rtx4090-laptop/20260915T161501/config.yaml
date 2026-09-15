@@ -1,0 +1,64 @@
+seed: 42
+deterministic: false
+torch_device: 0
+sample_interval_s: 0.05
+probe_control_permissions: false
+allow_dirty: false
+experiment_id: EXP-001
+name: instrumentation-gate
+experiment: exp_001_instrumentation
+phase: pilot
+workloads:
+  matmul_large:
+    n: 4096
+    dtype: float32
+  matmul_tiny_loop:
+    n: 64
+    dtype: float32
+resolution:
+  duration_s: 10
+idle:
+  duration_s: 60
+  discard_s: 5
+thermal:
+  heat_duration_s: 60
+  threshold_c: 1.0
+  window_s: 5.0
+  poll_s: 1.0
+  timeout_s: 300
+repeatability:
+  warmup_s: 30
+  block_duration_s: 10
+  n_blocks: 10
+window_sufficiency:
+  lengths_s:
+  - 0.5
+  - 1
+  - 2
+  - 5
+  - 10
+  - 20
+  reps: 5
+  warmup_s: 2
+criteria:
+  counter_update_period_ms_max: 200
+  counter_vs_integral_rel_max: 0.05
+  repeatability_cv_max:
+    matmul_large: 0.03
+    matmul_tiny_loop: 0.05
+  min_window_cv_target: 0.02
+  min_window_s_max: 10
+  min_window_workloads:
+  - matmul_large
+  forbidden_throttle_reasons:
+  - HwSlowdown
+  - HwThermalSlowdown
+  - SwThermalSlowdown
+  - HwPowerBrakeSlowdown
+_sources:
+- path: E:/data/code/claudecode/mlpowermeter/configs/base.yaml
+  sha256: 0ef0e65b098381650787031f05795036fbdbd875ad3d8cfe033bdb4315a693c3
+- path: E:/data/code/claudecode/mlpowermeter/configs/exp_001_instrumentation.yaml
+  sha256: 4aba410af6736aba9765ba71909fc8ec12b60e4fcf24c3723c71555cd1359541
+quick: true
+quick_factor: 0.05
