@@ -220,3 +220,71 @@ non-monotonic counter series caused by the read ordering in `stop()`.
 tagged `exp-001-protocol-v2`; all full runs execute under v2. Supersedes the
 wording of D-003 item 1 ("primary energy quantity: the counter"); D-003
 items 2 to 6 stand. The A100 gets its own verdict from its own full run.
+
+---
+
+## D-010 (2026-09-15) Measurement protocol for all experiments after the gate
+
+**Decision.**
+
+1. Measurement windows are 20 s by default. A 10 s window is permitted only
+   for workloads pinned at the power cap, and every reported number states
+   which regime it was measured in (the window's `throttle_reasons` and mean
+   power against the enforced limit decide).
+2. Before each block sequence, the workload is run until the GPU
+   temperature is stable under it (spread at most 1 C over 5 s, timeout
+   300 s, the same criterion as the idle settle), not for a fixed time. Each
+   measured window is additionally preceded by 2 s of the same configuration
+   unmeasured.
+3. Both energy quantities are recorded in every window; the platform overlay
+   in `configs/platform/<tag>.yaml` selects the energy source (D-009).
+4. GPU command counts (the dispatch term's S_o) are measured with
+   `torch.profiler` (CUPTI) per configuration on both platforms: one profiled
+   call after warmup, counting kernels, memcpy, and memset, with kernel names
+   recorded. On the laptop a subset of configurations is cross-checked once
+   against Nsight Systems (the TOMLSignals method, F-022) and the comparison
+   is logged.
+5. Inference microbenchmarks cycle through enough independent weight sets
+   that the total weight footprint is at least twice the device's L2 cache
+   (from torch device properties), so that per-call weight reads are not
+   served from L2 in a way a multi-layer model would not enjoy. The count and
+   the L2 size are recorded per run.
+6. Exact-function pairs declare a numerical tolerance before running; for
+   FP32 the default is a relative Frobenius difference of at most 1e-4 on
+   the output. A configuration that violates it is excluded with its reason
+   logged, never silently.
+7. Condition order within a block sequence is randomized with the run seed;
+   the order is written to the results.
+
+**Rationale.** Items 1, 2 and 3 are the EXP-001 laptop findings (dispatch-
+bound work needs 20 s for 2 percent CV; a fixed 30 s warmup did not reach
+steady state after a change of load level; the counter is not usable there).
+Item 4 makes the launch census portable to the cluster while keeping the
+validated method as a check. Item 5 keeps the memory term honest for weights
+that would otherwise sit in a 40 to 64 MB L2. Items 6 and 7 are blueprint
+sections 9 and 14.
+
+**Consequences.** Implemented as shared protocol helpers used by every
+experiment module from EXP-002 on; EXP-001 stays as run (fixed warmups, its
+protocol said so).
+
+---
+
+## D-011 (2026-09-15) Study design adopted as canon
+
+**Decision.** `docs/STUDY_DESIGN.md` is the pre-registration: platforms and
+the held-out-platform protocol, the Tier 1 and Tier 2 algorithm catalog,
+the primitive experiments EXP-002 to EXP-007, tasks, predictors P0 to P5,
+research questions RQ1 to RQ5 with hypotheses and refutation conditions,
+gates G0 to G6, the compute plan, and the claim discipline. The blueprint
+remains the reference for measurement and statistical protocol; where the
+two differ, the study design governs.
+
+**Rationale.** Framing C (D-001) needed its concrete object list and its
+falsifiable statements written down before the first spine experiment.
+
+**Consequences.** Numeric thresholds are provisional until a dated freeze
+entry after EXP-002 to EXP-004. Changes to the catalog or hypotheses are
+dated entries here, before the affected data is collected. A100 predictions
+for each spine experiment are filed in LOGBOOK.md with a commit hash before
+the corresponding job is submitted.
