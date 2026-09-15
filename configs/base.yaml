@@ -1,0 +1,9 @@
+# Shared defaults for every experiment. Per-experiment configs override these
+# (deep merge; the effective merged config is frozen into the run directory).
+
+seed: 42
+deterministic: false        # see DECISIONS.md D-008
+torch_device: 0             # torch CUDA index; resolved to the physical GPU by UUID
+sample_interval_s: 0.05     # background state sampler period
+probe_control_permissions: false   # off by default (D-003); the only NVML write in the code
+allow_dirty: false          # a full run refuses to start on a dirty working tree

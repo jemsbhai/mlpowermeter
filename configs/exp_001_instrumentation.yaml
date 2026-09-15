@@ -1,0 +1,53 @@
+# EXP-001: instrumentation validation (gate G0). Protocol and criteria are
+# pre-registered in LOGBOOK.md; this file is the machine-readable half.
+# Full run takes roughly 15 to 25 minutes per platform. Use --quick for a
+# 1 to 2 minute pipeline smoke test (results are labeled quick and are not
+# valid for the gate).
+
+experiment_id: EXP-001
+name: instrumentation-gate
+experiment: exp_001_instrumentation
+phase: pilot
+
+workloads:
+  matmul_large:
+    n: 4096            # FP32 square GEMM, 2*n^3 = 137 GFLOP per call
+    dtype: float32
+  matmul_tiny_loop:
+    n: 64              # FP32 square GEMM, one launch per call; dispatch bound
+    dtype: float32
+
+resolution:
+  duration_s: 10       # tight polling of counter and power, once idle and once under load
+
+idle:
+  duration_s: 60       # idle baseline after thermal settle
+  discard_s: 5
+
+thermal:
+  heat_duration_s: 60  # matmul_large heat load before the settle test
+  threshold_c: 1.0     # settled when max-min over the window is at most this
+  window_s: 5.0
+  poll_s: 1.0
+  timeout_s: 300
+
+repeatability:
+  warmup_s: 30
+  block_duration_s: 10
+  n_blocks: 10
+
+window_sufficiency:
+  lengths_s: [0.5, 1, 2, 5, 10, 20]
+  reps: 5
+  warmup_s: 2
+
+criteria:
+  counter_update_period_ms_max: 200
+  counter_vs_integral_rel_max: 0.05
+  repeatability_cv_max:
+    matmul_large: 0.03
+    matmul_tiny_loop: 0.05
+  min_window_cv_target: 0.02
+  min_window_s_max: 10
+  min_window_workloads: [matmul_large]
+  forbidden_throttle_reasons: [HwSlowdown, HwThermalSlowdown, SwThermalSlowdown, HwPowerBrakeSlowdown]
