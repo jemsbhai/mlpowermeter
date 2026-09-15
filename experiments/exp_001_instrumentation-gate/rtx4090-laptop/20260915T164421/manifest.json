@@ -1,0 +1,127 @@
+{
+  "config": {
+    "_sources": [
+      {
+        "path": "E:/data/code/claudecode/mlpowermeter/configs/base.yaml",
+        "sha256": "0ef0e65b098381650787031f05795036fbdbd875ad3d8cfe033bdb4315a693c3"
+      },
+      {
+        "path": "E:/data/code/claudecode/mlpowermeter/configs/exp_001_instrumentation.yaml",
+        "sha256": "edd5487b83fe46a262fa9637cff0a04bd6f57d851faab18d81ebe81e26ec4fe7"
+      }
+    ],
+    "allow_dirty": false,
+    "criteria": {
+      "counter_update_period_ms_max": 200,
+      "counter_vs_integral_rel_max": 0.05,
+      "forbidden_throttle_reasons": [
+        "HwSlowdown",
+        "HwThermalSlowdown",
+        "SwThermalSlowdown",
+        "HwPowerBrakeSlowdown"
+      ],
+      "implausible_power_fraction_max": 0.01,
+      "min_window_cv_target": 0.02,
+      "min_window_s_max": 10,
+      "min_window_workloads": [
+        "matmul_large"
+      ],
+      "repeatability_cv_max": {
+        "matmul_large": 0.03,
+        "matmul_tiny_loop": 0.05
+      }
+    },
+    "deterministic": false,
+    "experiment": "exp_001_instrumentation",
+    "experiment_id": "EXP-001",
+    "idle": {
+      "discard_s": 5,
+      "duration_s": 60
+    },
+    "name": "instrumentation-gate",
+    "phase": "pilot",
+    "probe_control_permissions": false,
+    "quick": true,
+    "quick_factor": 0.05,
+    "repeatability": {
+      "block_duration_s": 10,
+      "n_blocks": 10,
+      "warmup_s": 30
+    },
+    "resolution": {
+      "duration_s": 10
+    },
+    "sample_interval_s": 0.05,
+    "seed": 42,
+    "thermal": {
+      "heat_duration_s": 60,
+      "poll_s": 1.0,
+      "threshold_c": 1.0,
+      "timeout_s": 300,
+      "window_s": 5.0
+    },
+    "torch_device": 0,
+    "window_sufficiency": {
+      "lengths_s": [
+        0.5,
+        1,
+        2,
+        5,
+        10,
+        20
+      ],
+      "reps": 5,
+      "warmup_s": 2
+    },
+    "workloads": {
+      "matmul_large": {
+        "dtype": "float32",
+        "n": 4096
+      },
+      "matmul_tiny_loop": {
+        "dtype": "float32",
+        "n": 64
+      }
+    }
+  },
+  "created_local": "2026-09-15T16:44:21-04:00",
+  "created_utc": "2026-09-15T20:44:21+00:00",
+  "device": {
+    "method": "torch_uuid",
+    "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "notes": [],
+    "nvml_index": 0,
+    "pci_bus_id": "00000000:01:00.0",
+    "torch_index": 0,
+    "torch_name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "torch_uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+    "uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+    "uuid_verified": true
+  },
+  "experiment_id": "EXP-001",
+  "finished_local": "2026-09-15T16:46:36-04:00",
+  "finished_utc": "2026-09-15T20:46:36+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "8c99e38c5aa4362458ab62be846ba28d33ffee84",
+    "dirty": false,
+    "error": null,
+    "root": "E:\\data\\code\\claudecode\\mlpowermeter"
+  },
+  "hostname": "muntaserPC2024",
+  "name": "instrumentation-gate",
+  "output_dir": "E:\\data\\code\\claudecode\\mlpowermeter\\experiments\\exp_001_instrumentation-gate\\rtx4090-laptop\\20260915T164421",
+  "platform_tag": "rtx4090-laptop",
+  "quick": true,
+  "quick_factor": 0.05,
+  "run_id": "20260915T164421",
+  "seed": 42,
+  "status": "completed",
+  "summary": {
+    "gate_pass": true,
+    "gate_valid": false,
+    "summary_path": "E:/data/code/claudecode/mlpowermeter/experiments/exp_001_instrumentation-gate/rtx4090-laptop/20260915T164421/results/summary.json"
+  },
+  "torch_device": 0,
+  "wall_time_s": 135.40281250000407
+}
