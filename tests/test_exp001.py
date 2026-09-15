@@ -283,12 +283,46 @@ def test_runner_deep_merge_and_config_sources(tmp_path):
     merged = runner.deep_merge({"a": {"x": 1, "y": 2}, "b": 1}, {"a": {"y": 3}, "c": 4})
     assert merged == {"a": {"x": 1, "y": 3}, "b": 1, "c": 4}
     base = tmp_path / "base.yaml"
-    base.write_text("seed: 1\nsample_interval_s: 0.05\n")
+    base.write_text("seed: 1\nsample_interval_s: 0.05\nenergy_source: auto\n")
     exp = tmp_path / "exp.yaml"
     exp.write_text("seed: 7\nname: x\n")
     cfg = runner.load_config(exp, base)
     assert cfg["seed"] == 7 and cfg["sample_interval_s"] == 0.05 and cfg["name"] == "x"
     assert [s["path"].endswith(n) for s, n in zip(cfg["_sources"], ("base.yaml", "exp.yaml"))] == [True, True]
+    # platform overlay sits between base and experiment
+    plat = tmp_path / "platform" / "rtx4090-laptop.yaml"
+    plat.parent.mkdir()
+    plat.write_text("energy_source: power_integral\nmeasurement:\n  default_window_s: 20\nseed: 99\n")
+    cfg = runner.load_config(exp, base, plat)
+    assert cfg["energy_source"] == "power_integral"
+    assert cfg["measurement"]["default_window_s"] == 20
+    assert cfg["seed"] == 7                      # experiment still overrides the platform
+    assert [Path(s["path"]).name for s in cfg["_sources"]] == ["base.yaml", "rtx4090-laptop.yaml", "exp.yaml"]
+
+
+def test_runner_applies_platform_overlay_for_resolved_device(fake_nvml, tmp_path, monkeypatch):
+    """The fake resolves to an A100, so configs/platform/a100-sxm4-40gb.yaml
+    next to the experiment config must be merged and recorded."""
+    import tomlml.experiments.exp_001_instrumentation as exp
+
+    monkeypatch.setattr(exp, "make_workload",
+                        lambda name, params, device_index=0: SleepWorkload(name, per_call_s=0.002))
+    (tmp_path / "platform").mkdir()
+    (tmp_path / "platform" / "a100-sxm4-40gb.yaml").write_text(
+        "energy_source: counter\nmeasurement:\n  default_window_s: 10\n")
+    cfg_path = tmp_path / "exp_overlay.yaml"
+    cfg_path.write_text(yaml.safe_dump(TEST_CONFIG))
+    runner = _load_runner()
+    runner.main(["--config", str(cfg_path), "--out-root", str(tmp_path), "--run-id", "ov1"])
+    out = tmp_path / "experiments" / "exp_001_instrumentation-gate" / "a100-sxm4-40gb" / "ov1"
+    frozen = yaml.safe_load((out / "config.yaml").read_text())
+    assert frozen["energy_source"] == "counter"
+    assert frozen["measurement"]["default_window_s"] == 10
+    assert [Path(s["path"]).name for s in frozen["_sources"]] == ["a100-sxm4-40gb.yaml", "exp_overlay.yaml"]
+    import json
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert "\\" not in manifest["output_dir"]   # posix rendering on every platform
+    assert "config sources: a100-sxm4-40gb.yaml, exp_overlay.yaml" in (out / "logs" / "run.log").read_text()
 
 
 def test_quick_mode_scaling():
@@ -305,3 +339,7 @@ def test_quick_mode_scaling():
                       config={}, dev=None, sync_fn=lambda: None, logger=logging.getLogger("t"))
     assert full.scaled(60.0) == 60.0 and full.scaled_int(10) == 10
     assert isinstance(np.random.default_rng(1).permutation(3).tolist(), list)
+    assert full.energy_source == "auto"
+    assert RunContext(exp_id="e", name="n", platform_tag="t", run_id="r", out_dir=Path("."),
+                      config={"energy_source": "power_integral"}, dev=None, sync_fn=lambda: None,
+                      logger=logging.getLogger("t")).energy_source == "power_integral"

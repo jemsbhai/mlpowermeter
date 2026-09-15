@@ -1,0 +1,36 @@
+# Platform overrides for rtx4090-laptop (NVIDIA GeForce RTX 4090 Laptop GPU,
+# Windows 11, driver 595.79, torch 2.6.0+cu124).
+#
+# Established by EXP-001 run 20260915T164645 (commit 8c99e38, gate G0 PASS
+# under protocol v2, LOGBOOK.md addendum of 2026-09-15 17:30). The runner
+# merges this file after configs/base.yaml and before the experiment config,
+# so an experiment can still override a value explicitly.
+
+platform_tag: rtx4090-laptop
+
+# DECISIONS.md D-009: the NVML cumulative energy counter on this platform is
+# monotonic and updates every 100 ms but does not measure the GPU's energy
+# (about 500 W-equivalent at a 4.4 W idle). Energy is the trapezoid integral
+# of the 50 ms power readings; the counter is still recorded in every window.
+energy_source: power_integral
+sample_interval_s: 0.05
+
+measurement:
+  # Measured in EXP-001 S1 (10 s of tight polling at 822 to 1296 Hz).
+  counter_update_period_ms: 100
+  power_update_period_ms: 500
+  # Measured in EXP-001 S5 (smallest window with CV at or below 2 percent for
+  # that length and all longer lengths, 5 repetitions each).
+  min_window_s_power_capped: 0.5      # degenerate: energy per call is a timing measurement at the cap
+  min_window_s_uncapped: 20           # dispatch-bound loop near 60 W
+  default_window_s: 20                # protocol default for anything not pinned at the power cap
+  # Warm up under the workload until temperature is stable, not for a fixed
+  # time (EXP-001 observation 4: 30 s at 60 W did not reach steady state
+  # after a 175 W sequence).
+  warmup_until_thermal_settle: true
+  thermal_settle_threshold_c: 1.0
+  thermal_settle_window_s: 5.0
+  thermal_settle_timeout_s: 300
+  # Reference values for sanity checks, not inputs to any model.
+  idle_power_w: 4.4
+  power_limit_enforced_w: 175

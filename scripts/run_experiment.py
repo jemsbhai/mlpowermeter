@@ -42,13 +42,16 @@ def deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]
     return out
 
 
-def load_config(config_path: Path, base_path: Optional[Path]) -> Dict[str, Any]:
+def load_config(config_path: Path, base_path: Optional[Path],
+                platform_path: Optional[Path] = None) -> Dict[str, Any]:
+    """Merge base -> platform -> experiment (later files override earlier)."""
     config: Dict[str, Any] = {}
     sources = []
-    if base_path is not None and base_path.exists():
-        with open(base_path, "r", encoding="utf-8") as f:
-            config = deep_merge(config, yaml.safe_load(f) or {})
-        sources.append({"path": base_path.as_posix(), "sha256": sha256_file(base_path)})
+    for path in (base_path, platform_path):
+        if path is not None and path.exists():
+            with open(path, "r", encoding="utf-8") as f:
+                config = deep_merge(config, yaml.safe_load(f) or {})
+            sources.append({"path": path.as_posix(), "sha256": sha256_file(path)})
     with open(config_path, "r", encoding="utf-8") as f:
         config = deep_merge(config, yaml.safe_load(f) or {})
     sources.append({"path": config_path.as_posix(), "sha256": sha256_file(config_path)})
@@ -109,10 +112,18 @@ def main(argv: Optional[list] = None) -> int:
     try:
         platform_tag = (args.platform_tag or os.environ.get("TOMLML_PLATFORM_TAG")
                         or config.get("platform_tag") or platform_tag_from_gpu_name(dev.name))
+        # Platform overlay (configs/platform/<tag>.yaml) sits between base and
+        # experiment config; it carries what the platform's gate run established
+        # (energy source, window defaults). Re-merge now that the tag is known.
+        platform_path = cfg_path.parent / "platform" / f"{platform_tag}.yaml"
+        if platform_path.exists():
+            config = load_config(cfg_path, base_path, platform_path)
         out_dir = make_experiment_dir(out_root, exp_id, name, platform_tag, run_id=args.run_id)
         run_id = out_dir.name
         logger = setup_logger(out_dir / "logs" / "run.log")
         logger.info("%s %s on %s (run %s) -> %s", exp_id, name, platform_tag, run_id, out_dir)
+        logger.info("config sources: %s", ", ".join(Path(s["path"]).name for s in config["_sources"]))
+        logger.info("energy source setting: %s", config.get("energy_source", "auto"))
         logger.info("device: nvml index %s, %s, uuid %s, resolved by %s, uuid_verified=%s%s",
                     dev.index, dev.name, dev.uuid, dev.resolved.method, dev.resolved.uuid_verified,
                     (" notes: " + "; ".join(dev.resolved.notes)) if dev.resolved.notes else "")

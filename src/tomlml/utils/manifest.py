@@ -55,7 +55,7 @@ def git_info(repo_root: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
     """Commit SHA, branch, and dirty flag. Never raises; errors are recorded."""
     root = Path(repo_root) if repo_root else find_repo_root()
     info: Dict[str, Any] = {"commit": None, "branch": None, "dirty": None,
-                            "root": str(root) if root else None, "error": None}
+                            "root": root.as_posix() if root else None, "error": None}
     if root is None:
         info["error"] = "not inside a git repository"
         return info
@@ -171,7 +171,7 @@ def build_manifest(exp_id: str, name: str, platform_tag: str, run_id: str,
         "name": name,
         "platform_tag": platform_tag,
         "run_id": run_id,
-        "output_dir": str(out_dir),
+        "output_dir": Path(out_dir).as_posix(),
         "created_utc": utc_now_iso(),
         "created_local": local_now_iso(),
         "config": config,

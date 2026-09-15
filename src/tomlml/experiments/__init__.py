@@ -43,6 +43,12 @@ class RunContext:
     def samples_dir(self) -> Path:
         return self.out_dir / "samples"
 
+    @property
+    def energy_source(self) -> str:
+        """Energy source setting for this run (D-009): from the platform
+        overlay or the experiment config, ``auto`` when neither sets it."""
+        return str(self.config.get("energy_source", "auto"))
+
     def scaled(self, value: float, minimum: float = 0.0) -> float:
         """Scale a duration by the quick factor (identity for full runs)."""
         return max(minimum, float(value) * self.quick_factor)
