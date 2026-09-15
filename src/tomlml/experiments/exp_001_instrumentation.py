@@ -141,34 +141,64 @@ def min_sufficient_window(per_length: Dict[str, Dict[str, Any]], target_cv: floa
     return None
 
 
-def evaluate_criteria(summary: Dict[str, Any], crit: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
-    """Evaluate the pre-registered EXP-001 criteria against a run summary."""
-    out: Dict[str, Dict[str, Any]] = {}
+def select_energy_source(summary: Dict[str, Any], crit: Dict[str, Any]) -> Dict[str, Any]:
+    """Per-platform energy source (DECISIONS.md D-009).
 
-    def add(key: str, passed: Any, value: Any, threshold: Any, note: Optional[str] = None) -> None:
-        out[key] = {"pass": bool(passed), "value": value, "threshold": threshold, "note": note}
-
+    The counter qualifies only if it is supported and monotonic (C1), updates
+    at least every ``counter_update_period_ms_max`` (C2), and agrees with the
+    integrated power reading within ``counter_vs_integral_rel_max`` on every
+    repeatability block (C3). Otherwise the platform uses the power integral.
+    """
     counter = summary.get("counter", {})
-    add("C1_counter_supported_and_monotonic",
-        counter.get("supported") is True and counter.get("monotonic_all_windows") is True,
-        {"supported": counter.get("supported"), "monotonic": counter.get("monotonic_all_windows")},
-        {"supported": True, "monotonic": True})
-
+    c1 = counter.get("supported") is True and counter.get("monotonic_all_windows") is True
     period = (summary.get("resolution", {}).get("load", {}).get("energy", {})
               .get("period_ms_median"))
-    add("C2_counter_update_period_ms", period is not None and period <= crit["counter_update_period_ms_max"],
-        period, crit["counter_update_period_ms_max"], note="median interval between counter updates under load")
-
-    rels = [r.get("counter_vs_integral_max_abs_rel")
-            for r in summary.get("repeatability", {}).values()]
+    c2 = period is not None and period <= crit["counter_update_period_ms_max"]
+    rels = [r.get("counter_vs_integral_max_abs_rel") for r in summary.get("repeatability", {}).values()]
     rels = [r for r in rels if r is not None]
     worst = max(rels) if rels else None
-    add("C3_counter_vs_power_integral_rel", worst is not None and worst <= crit["counter_vs_integral_rel_max"],
-        worst, crit["counter_vs_integral_rel_max"], note="same-sensor consistency, not independent validation")
+    c3 = worst is not None and worst <= crit["counter_vs_integral_rel_max"]
+    reasons = [k for k, ok in (("C1", c1), ("C2", c2), ("C3", c3)) if not ok]
+    return {
+        "selected": "counter" if not reasons else "power_integral",
+        "counter_rejected_reasons": reasons,
+        "c1": c1, "c2": c2, "c3": c3,
+        "counter_update_period_ms_median": period,
+        "counter_vs_integral_worst_abs_rel": worst,
+    }
 
+
+def evaluate_criteria(summary: Dict[str, Any], crit: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Evaluate the pre-registered EXP-001 criteria (protocol v2, D-009).
+
+    C1 to C3 qualify the counter and select the energy source; they are
+    reported but not gating. C4 and C7 are evaluated on the selected source.
+    A criterion's ``gating`` flag says whether it counts toward the gate.
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+
+    def add(key: str, passed: Any, value: Any, threshold: Any, note: Optional[str] = None,
+            gating: bool = True) -> None:
+        out[key] = {"pass": bool(passed), "value": value, "threshold": threshold,
+                    "note": note, "gating": gating}
+
+    sel = select_energy_source(summary, crit)
+    source = sel["selected"]
+    qual_note = "counter qualification; selects the energy source (D-009), not gating"
+    counter = summary.get("counter", {})
+    add("C1_counter_supported_and_monotonic", sel["c1"],
+        {"supported": counter.get("supported"), "monotonic": counter.get("monotonic_all_windows")},
+        {"supported": True, "monotonic": True}, note=qual_note, gating=False)
+    add("C2_counter_update_period_ms", sel["c2"], sel["counter_update_period_ms_median"],
+        crit["counter_update_period_ms_max"], note=qual_note, gating=False)
+    add("C3_counter_vs_power_integral_rel", sel["c3"], sel["counter_vs_integral_worst_abs_rel"],
+        crit["counter_vs_integral_rel_max"], note=qual_note + "; same-sensor consistency", gating=False)
+
+    stats_key = "stats_counter" if source == "counter" else "stats_integral"
     for name, cvmax in crit["repeatability_cv_max"].items():
-        value = summary.get("repeatability", {}).get(name, {}).get("stats", {}).get("cv")
-        add(f"C4_repeatability_cv_{name}", value is not None and value <= cvmax, value, cvmax)
+        value = summary.get("repeatability", {}).get(name, {}).get(stats_key, {}).get("cv")
+        add(f"C4_repeatability_cv_{name}", value is not None and value <= cvmax, value, cvmax,
+            note=f"evaluated on energy source {source}")
 
     settle = summary.get("thermal", {}).get("settle_post_heat", {})
     add("C5_thermal_settle_before_timeout", settle.get("timed_out") is False,
@@ -177,10 +207,11 @@ def evaluate_criteria(summary: Dict[str, Any], crit: Dict[str, Any]) -> Dict[str
     n_cont = summary.get("isolation", {}).get("contaminated_windows")
     add("C6_no_foreign_compute_processes", n_cont == 0, n_cont, 0)
 
+    mw_key = "min_sufficient_window_counter_s" if source == "counter" else "min_sufficient_window_integral_s"
     for name in crit.get("min_window_workloads", ["matmul_large"]):
-        mw = summary.get("window_sufficiency", {}).get(name, {}).get("min_sufficient_window_s")
+        mw = summary.get("window_sufficiency", {}).get(name, {}).get(mw_key)
         add(f"C7_min_sufficient_window_s_{name}", mw is not None and mw <= crit["min_window_s_max"],
-            mw, crit["min_window_s_max"])
+            mw, crit["min_window_s_max"], note=f"evaluated on energy source {source}")
 
     forbidden = set(crit.get("forbidden_throttle_reasons", []))
     seen: set = set()
@@ -194,7 +225,20 @@ def evaluate_criteria(summary: Dict[str, Any], crit: Dict[str, Any]) -> Dict[str
     verified = summary.get("device", {}).get("uuid_verified")
     add("C9_device_uuid_verified", verified is True, verified, True,
         note="None means torch reported no uuid; verify the mapping manually and record it in the logbook")
+
+    iso = summary.get("isolation", {})
+    n_bad = iso.get("power_implausible_samples_total")
+    n_all = iso.get("samples_total")
+    frac = (n_bad / n_all) if (n_bad is not None and n_all) else None
+    add("C10_implausible_power_sample_fraction",
+        frac is not None and frac <= crit.get("implausible_power_fraction_max", 0.01),
+        frac, crit.get("implausible_power_fraction_max", 0.01),
+        note=f"{n_bad} of {n_all} samples above the plausibility ceiling")
     return out
+
+
+def gate_passes(criteria: Dict[str, Dict[str, Any]]) -> bool:
+    return all(c["pass"] for c in criteria.values() if c.get("gating", True))
 
 
 # --------------------------------------------------------------------------- #
@@ -253,12 +297,14 @@ def _window_brief(w: MeasurementWindow) -> Dict[str, Any]:
         "label": w.label, "duration_s": w.duration_s, "n_calls": w.n_calls,
         "energy_counter_j": w.energy_counter_j,
         "energy_power_integral_j": w.energy_power_integral_j,
-        "energy_per_call_j": w.energy_per_call_j(),
+        "energy_per_call_counter_j": w.energy_per_call_j("counter"),
+        "energy_per_call_integral_j": w.energy_per_call_j("power_integral"),
         "mean_power_w": w.mean_power_w, "power_std_w": w.power_std_w,
         "mean_temp_c": w.mean_temp_c, "max_temp_c": w.max_temp_c,
         "mean_sm_clock_mhz": w.mean_sm_clock_mhz, "min_sm_clock_mhz": w.min_sm_clock_mhz,
         "throttle_reasons": w.throttle_reasons, "counter_monotonic": w.counter_monotonic,
         "contaminated": w.contaminated, "n_samples": w.n_samples,
+        "power_implausible_samples": w.power_implausible_samples,
     }
 
 
@@ -305,6 +351,8 @@ def run(ctx: RunContext,
         cap["power_limit_write_probe"] = probe_power_limit_write_permission(dev)
     write_json(ctx.results_dir / "capabilities.json", cap)
     counter_supported = cap["energy_counter_mj"]["error"] is None
+    constraints = cap["power_limit_constraints_w"]["value"]
+    pmax = (2.0 * float(constraints[1])) if isinstance(constraints, list) and len(constraints) == 2 else None
     summary["capabilities_brief"] = {
         "driver_version": cap["system"]["driver_version"],
         "cuda_driver_version_str": cap["system"]["cuda_driver_version_str"],
@@ -317,6 +365,7 @@ def run(ctx: RunContext,
         "persistence_mode": cap["persistence_mode"]["value"],
         "throttle_api": cap["throttle"]["api"],
         "native_power_sample_period_ms": cap.get("power_samples_api", {}).get("native_period_ms_median"),
+        "power_max_plausible_w": pmax,
     }
     summary["isolation"] = {"start": cap["running_processes"]}
     log.info("  counter supported=%s driver=%s enforced_limit=%s W",
@@ -364,7 +413,8 @@ def run(ctx: RunContext,
     log.info("  settled at %.0f C after %.1f s (timed_out=%s); idle baseline %.1f s",
              settle_pre["settled_temp_c"], settle_pre["wait_time_s"], settle_pre["timed_out"], idle_dur)
     w_idle_pre = measure_idle(dev, duration_s=idle_dur, discard_s=idle_discard,
-                              sample_interval_s=interval, label="idle_pre")
+                              sample_interval_s=interval, label="idle_pre",
+                              power_max_plausible_w=pmax)
     record("idle_pre", None, w_idle_pre)
     _write_windows_csv(ctx.samples_dir / "idle_pre.csv", [w_idle_pre])
     drift_pre = linear_drift([s.t_perf for s in w_idle_pre.samples],
@@ -377,7 +427,8 @@ def run(ctx: RunContext,
     # ---- S3 thermal ------------------------------------------------------- #
     heat_s = ctx.scaled(th["heat_duration_s"], 0.2)
     log.info("S3 thermal: heat load for %.1f s", heat_s)
-    meter = EnergyMeter(dev, sample_interval_s=interval, sync_fn=sync, label="heat")
+    meter = EnergyMeter(dev, sample_interval_s=interval, sync_fn=sync, label="heat",
+                        power_max_plausible_w=pmax)
     meter.start()
     heat_calls = run_for(wl_large, heat_s, sync)
     w_heat = meter.stop(n_calls=heat_calls)
@@ -388,7 +439,8 @@ def run(ctx: RunContext,
              w_heat.throttle_reasons)
     settle_post = wait_for_thermal_settle(dev, **settle_kw)
     w_idle_post = measure_idle(dev, duration_s=idle_dur, discard_s=idle_discard,
-                               sample_interval_s=interval, label="idle_post")
+                               sample_interval_s=interval, label="idle_post",
+                               power_max_plausible_w=pmax)
     record("idle_post", None, w_idle_post)
     _write_windows_csv(ctx.samples_dir / "idle_post.csv", [w_idle_post])
     drift_post = linear_drift([s.t_perf for s in w_idle_post.samples],
@@ -431,15 +483,17 @@ def run(ctx: RunContext,
                  calib["per_call_s"] * 1000.0, calib["calls"])
         blocks: List[MeasurementWindow] = []
         for b in range(n_blocks):
-            w = EnergyMeter(dev, sample_interval_s=interval, sync_fn=sync).measure(
+            w = EnergyMeter(dev, sample_interval_s=interval, sync_fn=sync,
+                            power_max_plausible_w=pmax).measure(
                 wl.run_once, label=f"{name}_block{b:02d}", n_calls=calib["calls"])
             record("repeatability", name, w)
             blocks.append(w)
-            log.info("  block %02d: %.3f s, %.1f W, %.4g J/call (counter), monotonic=%s, throttle=%s",
-                     b, w.duration_s, w.mean_power_w or 0.0, w.energy_per_call_j() or 0.0,
-                     w.counter_monotonic, w.throttle_reasons)
+            log.info("  block %02d: %.3f s, %.1f W, %.4g J/call (counter) %.4g J/call (integral), monotonic=%s, throttle=%s",
+                     b, w.duration_s, w.mean_power_w or 0.0, w.energy_per_call_j("counter") or 0.0,
+                     w.energy_per_call_j("power_integral") or 0.0, w.counter_monotonic, w.throttle_reasons)
         _write_windows_csv(ctx.samples_dir / f"repeatability_{name}.csv", blocks)
-        epc = [w.energy_per_call_j() for w in blocks]
+        epc_counter = [w.energy_per_call_j("counter") for w in blocks]
+        epc_integral = [w.energy_per_call_j("power_integral") for w in blocks]
         rels = [_rel(w.energy_counter_j, w.energy_power_integral_j) for w in blocks]
         rels = [r for r in rels if r is not None]
         reasons: set = set()
@@ -450,8 +504,10 @@ def run(ctx: RunContext,
             "n_blocks": n_blocks,
             "block_duration_s_target": block_s,
             "blocks": [_window_brief(w) for w in blocks],
-            "energy_per_call_j": epc,
-            "stats": window_stats(epc),
+            "energy_per_call_counter_j": epc_counter,
+            "energy_per_call_integral_j": epc_integral,
+            "stats_counter": window_stats(epc_counter),
+            "stats_integral": window_stats(epc_integral),
             "mean_power_w": statistics.fmean([w.mean_power_w for w in blocks if w.mean_power_w is not None])
             if any(w.mean_power_w is not None for w in blocks) else None,
             "max_temp_c": max([w.max_temp_c for w in blocks if w.max_temp_c is not None], default=None),
@@ -464,11 +520,15 @@ def run(ctx: RunContext,
             "counter_monotonic_all": all(w.counter_monotonic for w in blocks)
             if all(w.counter_monotonic is not None for w in blocks) else None,
             "contaminated_blocks": sum(1 for w in blocks if w.contaminated),
+            "power_implausible_samples": sum(w.power_implausible_samples for w in blocks),
         }
-        st = summary["repeatability"][name]["stats"]
-        log.info("  repeatability [%s]: mean %.4g J/call, CV %s, counter vs integral max |rel| %s",
-                 name, st["mean"] or 0.0,
-                 f"{st['cv']:.4f}" if st["cv"] is not None else None,
+        st_c = summary["repeatability"][name]["stats_counter"]
+        st_i = summary["repeatability"][name]["stats_integral"]
+        log.info("  repeatability [%s]: counter %s J/call CV %s; integral %s J/call CV %s; counter vs integral max |rel| %s",
+                 name, f"{st_c['mean']:.4g}" if st_c["mean"] is not None else None,
+                 f"{st_c['cv']:.4f}" if st_c["cv"] is not None else None,
+                 f"{st_i['mean']:.4g}" if st_i["mean"] is not None else None,
+                 f"{st_i['cv']:.4f}" if st_i["cv"] is not None else None,
                  summary["repeatability"][name]["counter_vs_integral_max_abs_rel"])
 
         lengths = [float(x) for x in ws_cfg["lengths_s"]]
@@ -478,29 +538,40 @@ def run(ctx: RunContext,
         order = ctx.rng.permutation(len(plan)).tolist() if ctx.rng is not None else list(range(len(plan)))
         plan = [plan[i] for i in order]
         log.info("S5 window_sufficiency [%s]: lengths %s x %d reps, randomized order", name, lengths, reps)
-        per_length: Dict[str, List[Optional[float]]] = {f"{L:g}": [] for L in lengths}
+        per_length_counter: Dict[str, List[Optional[float]]] = {f"{L:g}": [] for L in lengths}
+        per_length_integral: Dict[str, List[Optional[float]]] = {f"{L:g}": [] for L in lengths}
+        targets: Dict[str, float] = {f"{L:g}": ctx.scaled(L, 0.02) for L in lengths}
         ws_windows: List[MeasurementWindow] = []
         for L, r in plan:
-            target = ctx.scaled(L, 0.02)
+            target = targets[f"{L:g}"]
             calls = max(1, int(math.ceil(target / calib["per_call_s"])))
             run_for(wl, ws_warm, sync)
-            w = EnergyMeter(dev, sample_interval_s=interval, sync_fn=sync).measure(
+            w = EnergyMeter(dev, sample_interval_s=interval, sync_fn=sync,
+                            power_max_plausible_w=pmax).measure(
                 wl.run_once, label=f"{name}_L{L:g}_r{r}", n_calls=calls)
             record("window_sufficiency", name, w)
             ws_windows.append(w)
-            per_length[f"{L:g}"].append(w.energy_per_call_j())
+            per_length_counter[f"{L:g}"].append(w.energy_per_call_j("counter"))
+            per_length_integral[f"{L:g}"].append(w.energy_per_call_j("power_integral"))
         _write_windows_csv(ctx.samples_dir / f"window_sufficiency_{name}.csv", ws_windows)
-        per_length_stats = {k: window_stats(v) for k, v in per_length.items()}
-        min_win = min_sufficient_window(per_length_stats, cfg["criteria"]["min_window_cv_target"])
+        target_cv = cfg["criteria"]["min_window_cv_target"]
+        stats_counter = {k: dict(window_stats(v), target_s=targets[k]) for k, v in per_length_counter.items()}
+        stats_integral = {k: dict(window_stats(v), target_s=targets[k]) for k, v in per_length_integral.items()}
         summary["window_sufficiency"][name] = {
             "order": [[L, r] for L, r in plan],
-            "per_length": per_length_stats,
-            "target_cv": cfg["criteria"]["min_window_cv_target"],
-            "min_sufficient_window_s": min_win,
+            "target_s_by_length": targets,
+            "per_length_counter": stats_counter,
+            "per_length_integral": stats_integral,
+            "target_cv": target_cv,
+            "min_sufficient_window_counter_s": min_sufficient_window(stats_counter, target_cv),
+            "min_sufficient_window_integral_s": min_sufficient_window(stats_integral, target_cv),
         }
-        log.info("  window sufficiency [%s]: CV by length %s; smallest sufficient window %s s",
-                 name, {k: (round(v["cv"], 4) if v["cv"] is not None else None)
-                        for k, v in per_length_stats.items()}, min_win)
+        log.info("  window sufficiency [%s]: CV by length, counter %s / integral %s; smallest sufficient window counter %s s, integral %s s",
+                 name,
+                 {k: (round(v["cv"], 4) if v["cv"] is not None else None) for k, v in stats_counter.items()},
+                 {k: (round(v["cv"], 4) if v["cv"] is not None else None) for k, v in stats_integral.items()},
+                 summary["window_sufficiency"][name]["min_sufficient_window_counter_s"],
+                 summary["window_sufficiency"][name]["min_sufficient_window_integral_s"])
 
     for wl in workloads.values():
         wl.teardown()
@@ -509,6 +580,9 @@ def run(ctx: RunContext,
     summary["isolation"]["end"] = dev.running_processes()
     summary["isolation"]["contaminated_windows"] = sum(1 for d in all_windows if d["contaminated"])
     summary["isolation"]["windows_total"] = len(all_windows)
+    summary["isolation"]["samples_total"] = sum(d["n_samples"] for d in all_windows)
+    summary["isolation"]["power_implausible_samples_total"] = sum(
+        d["power_implausible_samples"] for d in all_windows)
     monotonic_flags = [d["counter_monotonic"] for d in all_windows]
     summary["counter"] = {
         "supported": counter_supported,
@@ -520,14 +594,18 @@ def run(ctx: RunContext,
     write_json(ctx.results_dir / "windows.json", all_windows)
 
     # ---- S7 criteria ------------------------------------------------------ #
+    summary["energy_source"] = select_energy_source(summary, cfg["criteria"])
     summary["criteria"] = evaluate_criteria(summary, cfg["criteria"])
-    summary["gate_pass"] = all(c["pass"] for c in summary["criteria"].values())
+    summary["gate_pass"] = gate_passes(summary["criteria"])
     summary["gate_valid"] = not ctx.quick
     summary["wall_time_s"] = time.perf_counter() - t_run0
     write_json(ctx.results_dir / "summary.json", summary)
+    log.info("energy source for this platform: %s%s", summary["energy_source"]["selected"],
+             (" (counter rejected: " + ", ".join(summary["energy_source"]["counter_rejected_reasons"]) + ")")
+             if summary["energy_source"]["counter_rejected_reasons"] else "")
     for key, c in summary["criteria"].items():
-        log.info("  %s %s (value=%s threshold=%s)", "PASS" if c["pass"] else "FAIL", key,
-                 c["value"], c["threshold"])
+        log.info("  %s %s (value=%s threshold=%s)%s", "PASS" if c["pass"] else "FAIL", key,
+                 c["value"], c["threshold"], "" if c.get("gating", True) else " [not gating]")
     log.info("GATE %s (%s) in %.0f s", "PASS" if summary["gate_pass"] else "FAIL",
              "valid" if summary["gate_valid"] else "QUICK RUN, NOT VALID FOR THE GATE",
              summary["wall_time_s"])

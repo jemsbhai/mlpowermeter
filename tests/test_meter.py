@@ -182,3 +182,69 @@ def test_write_samples_csv(tmp_path, fake_device):
     assert lines[0].split(",") == ["window"] + SAMPLE_FIELDS
     assert len(lines) == 1 + w.n_samples
     assert lines[1].startswith("csv,")
+
+
+def test_quantized_counter_series_is_monotone_across_many_windows(fake_nvml, fake_device):
+    """Regression for the EXP-001 quick-run race: with a counter that updates
+    in steps and reads that take about a millisecond, reading the closing
+    value before stopping the sampler let a sample taken mid-cycle exceed it.
+    The fixed order must never flag a window."""
+    from tomlml.measure.meter import EnergyMeter
+
+    fake_nvml.counter_step_s = 0.02
+    fake_nvml.read_latency_s = 0.002
+    flags = []
+    for _ in range(30):
+        w = EnergyMeter(fake_device, sample_interval_s=0.005, sync_fn=lambda: None,
+                        check_processes=False).measure(lambda: _busy_sleep(0.1))
+        flags.append(w.counter_monotonic)
+        assert w.counter_end_mj >= max(s.energy_mj for s in w.samples if s.energy_mj is not None)
+    assert flags == [True] * 30
+
+
+def test_implausible_power_samples_are_masked_and_counted(fake_nvml, fake_device):
+    from tomlml.measure.meter import EnergyMeter, StateSample, mask_implausible_power
+
+    def s(t, p):
+        return StateSample(t_wall=t, t_perf=t, power_w=p, temp_c=None, sm_clock_mhz=None,
+                           mem_clock_mhz=None, energy_mj=None, throttle_mask=None)
+
+    masked, n = mask_implausible_power([s(0.0, 593.5), s(0.1, 60.0), s(0.2, None)], 350.0)
+    assert n == 1
+    assert [m.power_w for m in masked] == [None, 60.0, None]
+    assert mask_implausible_power([s(0.0, 593.5)], None) == ([s(0.0, 593.5)], 0)
+
+    # a window whose first reading is a glitch: stats and integral must ignore it
+    readings = iter([593.5] + [60.0] * 1000)
+    fake_device.power_w = lambda: next(readings)  # type: ignore[assignment]
+    w = EnergyMeter(fake_device, sample_interval_s=0.02, sync_fn=lambda: None,
+                    power_max_plausible_w=350.0).measure(lambda: _busy_sleep(0.2))
+    assert w.power_implausible_samples == 1
+    assert w.power_max_plausible_w == 350.0
+    assert w.mean_power_w == pytest.approx(60.0)
+    assert w.power_max_w == pytest.approx(60.0)
+    assert w.energy_power_integral_j == pytest.approx(60.0 * w.duration_s, rel=0.10)
+    assert w.samples[0].power_w == 593.5  # raw log keeps the reading
+
+
+def test_energy_source_selection(fake_nvml, fake_device):
+    from tomlml.measure.meter import EnergyMeter
+
+    w_auto = EnergyMeter(fake_device, sample_interval_s=0.02, sync_fn=lambda: None).measure(
+        lambda: _busy_sleep(0.1), n_calls=4)
+    assert w_auto.energy_source == "auto" and w_auto.energy_j == w_auto.energy_counter_j
+    w_int = EnergyMeter(fake_device, sample_interval_s=0.02, sync_fn=lambda: None,
+                        energy_source="power_integral").measure(lambda: _busy_sleep(0.1), n_calls=4)
+    assert w_int.energy_j == w_int.energy_power_integral_j
+    assert w_int.energy_per_call_j() == pytest.approx(w_int.energy_power_integral_j / 4)
+    assert w_int.energy_per_call_j("counter") == pytest.approx(w_int.energy_counter_j / 4)
+    w_cnt = EnergyMeter(fake_device, sample_interval_s=0.02, sync_fn=lambda: None,
+                        energy_source="counter").measure(lambda: _busy_sleep(0.1), n_calls=4)
+    assert w_cnt.energy_j == w_cnt.energy_counter_j
+    fake_nvml.energy_supported = False
+    w_none = EnergyMeter(fake_device, sample_interval_s=0.02, sync_fn=lambda: None,
+                         energy_source="counter").measure(lambda: _busy_sleep(0.05), n_calls=2)
+    assert w_none.energy_j is None and w_none.energy_per_call_j() is None
+    assert w_none.energy_per_call_j("power_integral") is not None
+    with pytest.raises(ValueError):
+        EnergyMeter(fake_device, energy_source="joules_from_thin_air")

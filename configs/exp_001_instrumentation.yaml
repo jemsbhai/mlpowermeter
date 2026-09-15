@@ -1,5 +1,6 @@
 # EXP-001: instrumentation validation (gate G0). Protocol and criteria are
-# pre-registered in LOGBOOK.md; this file is the machine-readable half.
+# pre-registered in LOGBOOK.md (protocol v2, addendum of 2026-09-15; see
+# DECISIONS.md D-009); this file is the machine-readable half.
 # Full run takes roughly 15 to 25 minutes per platform. Use --quick for a
 # 1 to 2 minute pipeline smoke test (results are labeled quick and are not
 # valid for the gate).
@@ -51,3 +52,4 @@ criteria:
   min_window_s_max: 10
   min_window_workloads: [matmul_large]
   forbidden_throttle_reasons: [HwSlowdown, HwThermalSlowdown, SwThermalSlowdown, HwPowerBrakeSlowdown]
+  implausible_power_fraction_max: 0.01   # C10; ceiling is 2x the device's max power-limit constraint

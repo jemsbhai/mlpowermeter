@@ -60,11 +60,15 @@ for these lines in the output and note them:
 - `device: nvml index N, NVIDIA A100-SXM4-40GB, uuid GPU-..., resolved by torch_uuid, uuid_verified=True`
 - `counter supported=True`
 - `counter update period under load: median X ms`
+- `energy source for this platform: counter` or `power_integral (counter rejected: ...)`
 - `GATE ... (QUICK RUN, NOT VALID FOR THE GATE)`
 
-If `uuid_verified` is not `True`, or `counter supported` is `False`, stop and
-report the full output; those are exactly the conditions this gate exists to
-find, and the fix belongs in the code, not in a workaround.
+If `uuid_verified` is not `True`, stop and report the full output; that is
+exactly the condition this gate exists to find, and the fix belongs in the
+code, not in a workaround. A rejected counter is not a failure: on the RTX
+4090 laptop the counter turned out not to measure the GPU's energy at all
+(DECISIONS.md D-009), and the gate then evaluates the power integral instead.
+Either way the log line is worth quoting when you report.
 
 ## 4. Full run (15 to 25 minutes)
 

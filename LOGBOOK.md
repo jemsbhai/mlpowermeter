@@ -220,3 +220,61 @@ count as contamination; any compute process that is not ours does.
 - `experiments/exp_001_instrumentation-gate/<platform-tag>/<run-id>/`
   (`results/summary.json`, `results/capabilities.json`, `results/windows.json`,
   `samples/*.csv`, `logs/run.log`)
+
+### Addendum 2026-09-15 16:20 (America/New_York): quick-run observations and protocol amendment v2
+
+Written before any full run. The original entry above is unchanged.
+
+**Quick-run observations (rtx4090-laptop, run `20260915T161501`, quick
+factor 0.05, not valid for the gate, committed as data).**
+
+- Device resolved by torch UUID, verified (`GPU-a19463b0-...`). NVML
+  reports the enforced power limit as 175.0 W although `nvidia-smi` shows
+  N/A; constraints 5 to 175 W.
+- Counter update period: median 100.1 ms under load, 100.0 ms at idle; NVML
+  poll rate on Windows about 760 Hz for two reads per poll.
+- Counter anomaly: the counter advanced at about 500 W-equivalent during the
+  settled idle window (power reading 4.0 W, SM 210 MHz, `GpuIdle`), about
+  250 W-equivalent during 175 W power-capped GEMM blocks, and about 164
+  W-equivalent during the dispatch-bound loop (power reading 63 W). Counter
+  versus integral: 0.57 (large) and 2.25 (tiny loop) maximum absolute
+  relative difference against a 0.05 threshold. Not a constant factor and
+  not physically possible for a 175 W part; the counter is not this GPU's
+  energy on this platform. Raw series in `samples/idle_pre.csv` and
+  `samples/repeatability_matmul_large.csv`.
+- The first power reading after initialization was 593.5 W
+  (`samples/resolution_idle.csv`); all later readings were plausible.
+- One block reported a non-monotonic counter series; traced to the closing
+  counter read preceding the sampler stop in `EnergyMeter.stop()` (race,
+  fixed and covered by a regression test).
+- Thermal: heat load reached 65 C at 151 W mean (ramp included), settled in
+  10 s at quick scale; post-heat idle bias +0.13 W.
+- Throttle reasons under load: `SwPowerCap` (allowed), `GpuIdle` during
+  the dispatch-bound loop (expected: the GPU is mostly idle there).
+- Window-sufficiency and repeatability numbers at quick scale are not
+  interpretable (blocks were 0.5 s against a 100 ms counter period) and are
+  not used.
+
+**Protocol amendment v2 (DECISIONS.md D-009).** Both energy quantities are
+recorded in every window. C1 to C3 qualify the counter per platform and
+select the platform's energy source; they no longer gate. C4 and C7 are
+evaluated on the selected source. New C10 bounds the fraction of power
+samples masked by the plausibility ceiling. The closing counter read now
+follows the sampler stop. Per-length target durations are recorded in the
+window-sufficiency summary so quick runs cannot be misread.
+
+| ID | Criterion (v2) | Threshold | Gating |
+|----|----------------|-----------|--------|
+| C1 | Counter supported and monotonic in every window | true | no (selects source) |
+| C2 | Median counter update interval under load | at most 200 ms | no (selects source) |
+| C3 | Max abs relative difference, counter vs power integral, repeatability blocks | at most 0.05 | no (selects source) |
+| C4 | CV of energy per call across blocks, on the selected source | matmul_large 0.03; matmul_tiny_loop 0.05 | yes |
+| C5 | Thermal settle after heat load before timeout | 300 s | yes |
+| C6 | No foreign compute process in any window | 0 | yes |
+| C7 | Smallest sufficient window on the selected source, matmul_large | at most 10 s | yes |
+| C8 | No forbidden throttle reason under load | none | yes |
+| C9 | torch device UUID equals NVML device UUID | true | yes |
+| C10 | Fraction of power samples above the plausibility ceiling | at most 0.01 | yes |
+
+Energy source = counter if C1, C2, and C3 all pass, else power integral.
+The full runs on both platforms execute under v2 (tag `exp-001-protocol-v2`).

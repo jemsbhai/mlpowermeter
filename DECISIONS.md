@@ -172,3 +172,51 @@ not from bitwise-identical outputs.
 **Consequences.** Any experiment that compares outputs numerically (exact
 function tests, such as dense versus factorized maps) declares its numerical
 tolerance in the logbook entry rather than relying on determinism.
+
+---
+
+## D-009 (2026-09-15) Energy source is selected per platform by the instrumentation gate
+
+**Decision.**
+
+1. Every measurement window records both quantities: the cumulative-counter
+   delta (`energy_counter_j`) and the trapezoid integral of the 50 ms power
+   readings (`energy_power_integral_j`). Neither is discarded.
+2. EXP-001 qualifies the counter per platform with three criteria: C1
+   (supported and monotonic in every window), C2 (median update interval at
+   most 200 ms under load), C3 (agreement with the power integral within 5
+   percent on every repeatability block). A platform uses the counter as its
+   energy source only if all three pass; otherwise it uses the power integral.
+   C1 to C3 are reported but do not gate; C4 (repeatability) and C7 (window
+   sufficiency) are evaluated on the selected source and do gate.
+3. The selection is written into the run's `summary.json` (`energy_source`)
+   and, after the full run, into a per-platform config override that every
+   later experiment on that platform inherits. The paper's methods section
+   states the source per platform.
+4. Power readings above a plausibility ceiling (twice the device's maximum
+   power-limit constraint from the capability probe) are kept in the raw
+   sample log but masked from power statistics and the integral, and
+   counted. The masked fraction is gate criterion C10 (at most 1 percent).
+5. The closing counter value of a window is read after the sampler thread
+   has stopped, so the counter series of a window is monotone by
+   construction if the hardware counter is.
+
+**Rationale.** The rtx4090-laptop quick run of EXP-001 (run
+`20260915T161501`, committed with this decision) showed the NVML counter
+advancing at about 500 W-equivalent while the GPU idled at 4 W and 210 MHz,
+about 250 W-equivalent under a 175 W power-capped GEMM load, and about 164
+W-equivalent for the dispatch-bound loop whose power reading was 63 W.
+Whatever that counter integrates on this platform, it is not this GPU's
+energy in millijoules, and it is not off by a constant factor either. The
+power reading was physically consistent throughout (4 W idle, 175 W pinned at
+the cap with `SwPowerCap`, 63 W for the dispatch-bound loop). The power
+integral is also the method behind the published TOMLSignals results on both
+GPUs, so using it where the counter fails keeps the study's measurements
+comparable with the program's prior work. The same run produced one 593.5 W
+power reading (the first after initialization) and one spurious
+non-monotonic counter series caused by the read ordering in `stop()`.
+
+**Consequences.** EXP-001 protocol v2 (LOGBOOK.md addendum of 2026-09-15),
+tagged `exp-001-protocol-v2`; all full runs execute under v2. Supersedes the
+wording of D-003 item 1 ("primary energy quantity: the counter"); D-003
+items 2 to 6 stand. The A100 gets its own verdict from its own full run.

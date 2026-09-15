@@ -14,11 +14,13 @@ import csv
 import statistics
 import threading
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from .nvml import NvmlDevice, decode_throttle_reasons, nvml_error_name
+
+ENERGY_SOURCES = ("auto", "counter", "power_integral")
 
 
 # --------------------------------------------------------------------------- #
@@ -160,6 +162,9 @@ class MeasurementWindow:
     sampler_errors: Dict[str, int]
     sampler_disabled: Dict[str, str]
     n_calls: Optional[int] = None
+    energy_source: str = "auto"
+    power_max_plausible_w: Optional[float] = None
+    power_implausible_samples: int = 0
     samples: List[StateSample] = field(default_factory=list, repr=False, compare=False)
 
     def to_dict(self, include_samples: bool = False) -> Dict[str, Any]:
@@ -170,15 +175,28 @@ class MeasurementWindow:
 
     @property
     def energy_j(self) -> Optional[float]:
-        """Primary energy: counter delta, falling back to the power integral."""
+        """Energy from the selected source (DECISIONS.md D-009): ``counter``,
+        ``power_integral``, or ``auto`` (counter when available, else the
+        power integral)."""
+        if self.energy_source == "counter":
+            return self.energy_counter_j
+        if self.energy_source == "power_integral":
+            return self.energy_power_integral_j
         if self.energy_counter_j is not None:
             return self.energy_counter_j
         return self.energy_power_integral_j
 
-    def energy_per_call_j(self) -> Optional[float]:
-        if not self.n_calls or self.energy_j is None:
+    def energy_per_call_j(self, source: Optional[str] = None) -> Optional[float]:
+        """Energy per call from the selected source, or from an explicit one."""
+        if not self.n_calls:
             return None
-        return self.energy_j / self.n_calls
+        if source == "counter":
+            energy = self.energy_counter_j
+        elif source == "power_integral":
+            energy = self.energy_power_integral_j
+        else:
+            energy = self.energy_j
+        return None if energy is None else energy / self.n_calls
 
 
 def _mean(xs: List[float]) -> Optional[float]:
@@ -212,6 +230,28 @@ def foreign_compute_processes(procs: List[Dict[str, Any]]) -> List[Dict[str, Any
     return [p for p in procs if p.get("kind") == "compute"]
 
 
+def mask_implausible_power(samples: List[StateSample],
+                           power_max_plausible_w: Optional[float]) -> tuple:
+    """Blank the power field of samples above the plausibility ceiling.
+
+    Returns ``(masked_samples, n_masked)``. The first NVML power reading after
+    initialization on the RTX 4090 Laptop GPU was 593.5 W (EXP-001 quick run,
+    2026-09-15); such values are recorded in the raw sample log but must not
+    enter the integral or the power statistics.
+    """
+    if power_max_plausible_w is None:
+        return samples, 0
+    out: List[StateSample] = []
+    n_masked = 0
+    for s in samples:
+        if s.power_w is not None and s.power_w > power_max_plausible_w:
+            out.append(replace(s, power_w=None))
+            n_masked += 1
+        else:
+            out.append(s)
+    return out, n_masked
+
+
 def summarize_window(
     label: str,
     t0_wall: float, t1_wall: float,
@@ -224,9 +264,14 @@ def summarize_window(
     sampler_errors: Optional[Dict[str, int]] = None,
     sampler_disabled: Optional[Dict[str, str]] = None,
     n_calls: Optional[int] = None,
+    energy_source: str = "auto",
+    power_max_plausible_w: Optional[float] = None,
 ) -> MeasurementWindow:
+    if energy_source not in ENERGY_SOURCES:
+        raise ValueError(f"energy_source must be one of {ENERGY_SOURCES}, got {energy_source!r}")
     duration = max(t1_perf - t0_perf, 0.0)
-    powers = [s.power_w for s in samples if s.power_w is not None]
+    clean, n_implausible = mask_implausible_power(samples, power_max_plausible_w)
+    powers = [s.power_w for s in clean if s.power_w is not None]
     temps = [s.temp_c for s in samples if s.temp_c is not None]
     sms = [s.sm_clock_mhz for s in samples if s.sm_clock_mhz is not None]
     mems = [s.mem_clock_mhz for s in samples if s.mem_clock_mhz is not None]
@@ -263,7 +308,7 @@ def summarize_window(
         counter_start_mj=counter_start_mj,
         counter_end_mj=counter_end_mj,
         energy_counter_j=counter_j,
-        energy_power_integral_j=integrate_power(samples, t0_perf, t1_perf),
+        energy_power_integral_j=integrate_power(clean, t0_perf, t1_perf),
         energy_mean_power_j=(mean_p * duration) if mean_p is not None else None,
         mean_power_w=mean_p,
         power_std_w=_pstd(powers),
@@ -285,6 +330,9 @@ def summarize_window(
         sampler_errors=dict(sampler_errors or {}),
         sampler_disabled=dict(sampler_disabled or {}),
         n_calls=n_calls,
+        energy_source=energy_source,
+        power_max_plausible_w=power_max_plausible_w,
+        power_implausible_samples=n_implausible,
         samples=samples,
     )
 
@@ -329,7 +377,11 @@ class EnergyMeter:
     def __init__(self, dev: NvmlDevice, sample_interval_s: float = 0.05,
                  sync_fn: Optional[Callable[[], None]] = None,
                  check_processes: bool = True, read_energy: bool = True,
-                 read_throttle: bool = True, label: str = ""):
+                 read_throttle: bool = True, label: str = "",
+                 energy_source: str = "auto",
+                 power_max_plausible_w: Optional[float] = None):
+        if energy_source not in ENERGY_SOURCES:
+            raise ValueError(f"energy_source must be one of {ENERGY_SOURCES}, got {energy_source!r}")
         self.dev = dev
         self.sample_interval_s = float(sample_interval_s)
         self.sync_fn = sync_fn if sync_fn is not None else make_cuda_sync()
@@ -337,6 +389,8 @@ class EnergyMeter:
         self.read_energy = read_energy
         self.read_throttle = read_throttle
         self.label = label
+        self.energy_source = energy_source
+        self.power_max_plausible_w = power_max_plausible_w
         self.window: Optional[MeasurementWindow] = None
         self._sampler: Optional[StateSampler] = None
         self._counter_error: Optional[str] = None
@@ -368,13 +422,23 @@ class EnergyMeter:
         return self
 
     def stop(self, n_calls: Optional[int] = None) -> MeasurementWindow:
+        """Close the window.
+
+        Order matters: synchronize, take the end timestamp, stop the sampler
+        thread, and only then read the closing counter value. Reading the
+        counter before the sampler stopped let the thread take one more sample
+        after a counter update, which produced a spurious non-monotonic series
+        (EXP-001 quick run, 2026-09-15). The closing read now trails the end
+        timestamp by at most one sampler read cycle, during which the device
+        is idle.
+        """
         if self._sampler is None:
             raise RuntimeError("EnergyMeter.stop() called before start()")
         self.sync_fn()
         t1_perf = time.perf_counter()
         t1_wall = time.time()
-        c1 = self._read_counter()
         samples = self._sampler.stop()
+        c1 = self._read_counter()
         procs_after = self.dev.running_processes() if self.check_processes else []
         errors = dict(self._sampler.errors)
         disabled = dict(self._sampler.disabled)
@@ -384,6 +448,8 @@ class EnergyMeter:
             self.label, self._t0_wall, t1_wall, self._t0_perf, t1_perf,
             self._c0, c1, samples, self._procs_before, procs_after,
             self.sample_interval_s, errors, disabled, n_calls=n_calls,
+            energy_source=self.energy_source,
+            power_max_plausible_w=self.power_max_plausible_w,
         )
         self._sampler = None
         return self.window
@@ -451,13 +517,17 @@ def measure_idle(
     check_processes: bool = True,
     sleep_fn: Callable[[float], None] = time.sleep,
     label: str = "idle",
+    energy_source: str = "auto",
+    power_max_plausible_w: Optional[float] = None,
 ) -> MeasurementWindow:
     """Idle baseline: sleep ``discard_s`` (device settling), then measure the
     remaining ``duration_s - discard_s`` with no work submitted."""
     if discard_s > 0:
         sleep_fn(discard_s)
     meter = EnergyMeter(dev, sample_interval_s=sample_interval_s, sync_fn=no_sync,
-                        check_processes=check_processes, label=label)
+                        check_processes=check_processes, label=label,
+                        energy_source=energy_source,
+                        power_max_plausible_w=power_max_plausible_w)
     meter.start()
     sleep_fn(max(duration_s - discard_s, 0.0))
     return meter.stop()

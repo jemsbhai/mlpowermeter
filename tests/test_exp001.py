@@ -12,7 +12,8 @@ import pytest
 import yaml
 
 from tomlml.experiments.exp_001_instrumentation import (
-    cv, evaluate_criteria, linear_drift, min_sufficient_window, update_period_stats, window_stats,
+    cv, evaluate_criteria, gate_passes, linear_drift, min_sufficient_window, select_energy_source,
+    update_period_stats, window_stats,
 )
 from tomlml.workloads import SleepWorkload
 
@@ -76,15 +77,19 @@ def _passing_summary():
         "counter": {"supported": True, "monotonic_all_windows": True},
         "resolution": {"load": {"energy": {"period_ms_median": 100.0}}},
         "repeatability": {
-            "matmul_large": {"stats": {"cv": 0.01}, "counter_vs_integral_max_abs_rel": 0.02,
+            "matmul_large": {"stats_counter": {"cv": 0.01}, "stats_integral": {"cv": 0.012},
+                             "counter_vs_integral_max_abs_rel": 0.02,
                              "throttle_reasons_union": ["SwPowerCap"]},
-            "matmul_tiny_loop": {"stats": {"cv": 0.03}, "counter_vs_integral_max_abs_rel": 0.04,
+            "matmul_tiny_loop": {"stats_counter": {"cv": 0.03}, "stats_integral": {"cv": 0.035},
+                                 "counter_vs_integral_max_abs_rel": 0.04,
                                  "throttle_reasons_union": []},
         },
         "thermal": {"settle_post_heat": {"timed_out": False, "wait_time_s": 40.0},
                     "settle_timeout_s": 300, "heat": {"throttle_reasons": ["SwPowerCap"]}},
-        "isolation": {"contaminated_windows": 0},
-        "window_sufficiency": {"matmul_large": {"min_sufficient_window_s": 5.0}},
+        "isolation": {"contaminated_windows": 0, "samples_total": 20000,
+                      "power_implausible_samples_total": 1},
+        "window_sufficiency": {"matmul_large": {"min_sufficient_window_counter_s": 5.0,
+                                                "min_sufficient_window_integral_s": 10.0}},
     }
 
 
@@ -94,41 +99,80 @@ CRITERIA = {
     "min_window_cv_target": 0.02, "min_window_s_max": 10, "min_window_workloads": ["matmul_large"],
     "forbidden_throttle_reasons": ["HwSlowdown", "HwThermalSlowdown", "SwThermalSlowdown",
                                    "HwPowerBrakeSlowdown"],
+    "implausible_power_fraction_max": 0.01,
+}
+
+ALL_KEYS = {
+    "C1_counter_supported_and_monotonic", "C2_counter_update_period_ms",
+    "C3_counter_vs_power_integral_rel", "C4_repeatability_cv_matmul_large",
+    "C4_repeatability_cv_matmul_tiny_loop", "C5_thermal_settle_before_timeout",
+    "C6_no_foreign_compute_processes", "C7_min_sufficient_window_s_matmul_large",
+    "C8_no_forbidden_throttle_reasons", "C9_device_uuid_verified",
+    "C10_implausible_power_sample_fraction",
 }
 
 
-def test_evaluate_criteria_all_pass():
-    res = evaluate_criteria(_passing_summary(), CRITERIA)
-    assert set(res) == {
-        "C1_counter_supported_and_monotonic", "C2_counter_update_period_ms",
-        "C3_counter_vs_power_integral_rel", "C4_repeatability_cv_matmul_large",
-        "C4_repeatability_cv_matmul_tiny_loop", "C5_thermal_settle_before_timeout",
-        "C6_no_foreign_compute_processes", "C7_min_sufficient_window_s_matmul_large",
-        "C8_no_forbidden_throttle_reasons", "C9_device_uuid_verified",
-    }
+def test_evaluate_criteria_all_pass_with_counter_selected():
+    s = _passing_summary()
+    sel = select_energy_source(s, CRITERIA)
+    assert sel["selected"] == "counter" and sel["counter_rejected_reasons"] == []
+    res = evaluate_criteria(s, CRITERIA)
+    assert set(res) == ALL_KEYS
     assert all(c["pass"] for c in res.values()), {k: c for k, c in res.items() if not c["pass"]}
+    assert {k for k, c in res.items() if not c["gating"]} == {
+        "C1_counter_supported_and_monotonic", "C2_counter_update_period_ms",
+        "C3_counter_vs_power_integral_rel"}
+    assert res["C4_repeatability_cv_matmul_large"]["value"] == 0.01      # counter stats
+    assert res["C7_min_sufficient_window_s_matmul_large"]["value"] == 5.0
+    assert gate_passes(res)
+
+
+def test_counter_rejected_falls_back_to_power_integral_and_gate_can_still_pass():
+    """The rtx4090-laptop situation from the 2026-09-15 quick run: counter
+    disagrees with the integral by far more than 5 percent."""
+    s = _passing_summary()
+    s["repeatability"]["matmul_large"]["counter_vs_integral_max_abs_rel"] = 0.57
+    s["repeatability"]["matmul_tiny_loop"]["counter_vs_integral_max_abs_rel"] = 2.25
+    sel = select_energy_source(s, CRITERIA)
+    assert sel["selected"] == "power_integral" and sel["counter_rejected_reasons"] == ["C3"]
+    res = evaluate_criteria(s, CRITERIA)
+    assert res["C3_counter_vs_power_integral_rel"]["pass"] is False
+    assert res["C3_counter_vs_power_integral_rel"]["gating"] is False
+    assert res["C4_repeatability_cv_matmul_large"]["value"] == 0.012     # integral stats
+    assert res["C7_min_sufficient_window_s_matmul_large"]["value"] == 10.0
+    assert gate_passes(res)
+    # but the integral must itself be fit for purpose
+    s["window_sufficiency"]["matmul_large"]["min_sufficient_window_integral_s"] = 20.0
+    assert not gate_passes(evaluate_criteria(s, CRITERIA))
+
+
+def test_counter_rejected_for_non_monotonic_or_slow_updates():
+    s = _passing_summary()
+    s["counter"]["monotonic_all_windows"] = False
+    s["resolution"]["load"]["energy"]["period_ms_median"] = 250.0
+    sel = select_energy_source(s, CRITERIA)
+    assert sel["selected"] == "power_integral"
+    assert sel["counter_rejected_reasons"] == ["C1", "C2"]
 
 
 @pytest.mark.parametrize("mutate,failing", [
-    (lambda s: s["counter"].update(monotonic_all_windows=False), "C1_counter_supported_and_monotonic"),
-    (lambda s: s["resolution"]["load"]["energy"].update(period_ms_median=250.0), "C2_counter_update_period_ms"),
-    (lambda s: s["repeatability"]["matmul_tiny_loop"].update(counter_vs_integral_max_abs_rel=0.08),
-     "C3_counter_vs_power_integral_rel"),
-    (lambda s: s["repeatability"]["matmul_large"]["stats"].update(cv=0.04), "C4_repeatability_cv_matmul_large"),
+    (lambda s: s["repeatability"]["matmul_large"]["stats_counter"].update(cv=0.04), "C4_repeatability_cv_matmul_large"),
     (lambda s: s["thermal"]["settle_post_heat"].update(timed_out=True), "C5_thermal_settle_before_timeout"),
     (lambda s: s["isolation"].update(contaminated_windows=2), "C6_no_foreign_compute_processes"),
-    (lambda s: s["window_sufficiency"]["matmul_large"].update(min_sufficient_window_s=20.0),
+    (lambda s: s["window_sufficiency"]["matmul_large"].update(min_sufficient_window_counter_s=20.0),
      "C7_min_sufficient_window_s_matmul_large"),
     (lambda s: s["thermal"]["heat"].update(throttle_reasons=["HwThermalSlowdown"]),
      "C8_no_forbidden_throttle_reasons"),
     (lambda s: s["device"].update(uuid_verified=None), "C9_device_uuid_verified"),
+    (lambda s: s["isolation"].update(power_implausible_samples_total=500), "C10_implausible_power_sample_fraction"),
 ])
-def test_evaluate_criteria_single_failures(mutate, failing):
+def test_evaluate_criteria_single_gating_failures(mutate, failing):
     s = _passing_summary()
     mutate(s)
     res = evaluate_criteria(s, CRITERIA)
     failed = sorted(k for k, c in res.items() if not c["pass"])
     assert failed == [failing]
+    assert not gate_passes(res)
 
 
 # ----------------------------------------------------------------------------- end to end
@@ -189,21 +233,27 @@ def test_exp001_end_to_end_with_fake_device(fake_nvml, tmp_path, monkeypatch):
     summary = json.loads((out / "results" / "summary.json").read_text())
     assert summary["device"]["uuid_verified"] is True
     assert summary["capabilities_brief"]["energy_counter_supported"] is True
+    assert summary["capabilities_brief"]["power_max_plausible_w"] == pytest.approx(350.0)
     assert summary["counter"]["supported"] is True and summary["counter"]["monotonic_all_windows"] is True
     assert summary["resolution"]["load"]["energy"]["n_polls"] > 10
     assert summary["idle"]["pre_heat"]["mean_power_w"] == pytest.approx(60.0)
     assert summary["thermal"]["settle_post_heat"]["timed_out"] is False
     assert summary["thermal"]["hot_idle_bias_w"] == pytest.approx(0.0, abs=1e-6)
     rep = summary["repeatability"]["matmul_large"]
-    assert rep["n_blocks"] == 3 and len(rep["energy_per_call_j"]) == 3
-    assert rep["stats"]["mean"] == pytest.approx(60.0 * 0.002, rel=0.5)
+    assert rep["n_blocks"] == 3 and len(rep["energy_per_call_counter_j"]) == 3
+    assert rep["stats_counter"]["mean"] == pytest.approx(60.0 * 0.002, rel=0.5)
+    assert rep["stats_integral"]["mean"] == pytest.approx(60.0 * 0.002, rel=0.5)
     assert rep["counter_vs_integral_max_abs_rel"] is not None and rep["counter_vs_integral_max_abs_rel"] < 0.2
     ws = summary["window_sufficiency"]["matmul_tiny_loop"]
-    assert set(ws["per_length"]) == {"0.05", "0.1"} and len(ws["order"]) == 4
+    assert set(ws["per_length_counter"]) == {"0.05", "0.1"} and len(ws["order"]) == 4
+    assert ws["per_length_integral"]["0.1"]["target_s"] == pytest.approx(0.1)
     assert summary["isolation"]["contaminated_windows"] == 0
-    assert set(summary["criteria"]) >= {"C1_counter_supported_and_monotonic", "C9_device_uuid_verified"}
+    assert summary["isolation"]["samples_total"] > 0
+    assert summary["energy_source"]["selected"] in ("counter", "power_integral")
+    assert set(summary["criteria"]) == ALL_KEYS
     assert summary["criteria"]["C9_device_uuid_verified"]["pass"] is True
     assert summary["criteria"]["C6_no_foreign_compute_processes"]["pass"] is True
+    assert summary["criteria"]["C10_implausible_power_sample_fraction"]["pass"] is True
     cap = json.loads((out / "results" / "capabilities.json").read_text())
     assert cap["power_limit_write_probe"]["probed"] is False  # NotSupported on the fake
 

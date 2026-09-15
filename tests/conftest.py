@@ -10,6 +10,7 @@ counter-versus-integral consistency check be tested for real.
 from __future__ import annotations
 
 import ctypes
+import math
 import time
 import types
 from typing import Any, Dict, List
@@ -104,6 +105,8 @@ class FakePynvml:
         self.init_calls = 0
         self.shutdown_calls = 0
         self.energy_base_mj = 1_000_000
+        self.counter_step_s = 0.0  # >0 quantizes the counter like a real sensor (100 ms on the 4090 laptop)
+        self.read_latency_s = 0.0  # >0 makes every device read take this long (about 1 ms on Windows)
         self.throttle_mask = 0
         self.set_power_limit_calls: List[int] = []
         self.management_limit_mw = None  # None -> NotSupported
@@ -135,6 +138,8 @@ class FakePynvml:
         return _Handle(i)
 
     def _d(self, h: _Handle) -> Dict[str, Any]:
+        if self.read_latency_s > 0:
+            time.sleep(self.read_latency_s)
         return self.devices[h.idx]
 
     def nvmlDeviceGetUUID(self, h: _Handle) -> str:
@@ -151,6 +156,8 @@ class FakePynvml:
         if not self.energy_supported:
             raise NVMLError_NotSupported()
         elapsed = time.perf_counter() - self._t0
+        if self.counter_step_s > 0:
+            elapsed = math.floor(elapsed / self.counter_step_s) * self.counter_step_s
         return int(self.energy_base_mj + self._d(h)["power_w"] * 1000.0 * elapsed)
 
     def nvmlDeviceGetPowerUsage(self, h: _Handle) -> int:

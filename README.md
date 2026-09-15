@@ -105,10 +105,14 @@ On the cluster the same command runs inside `scripts/slurm/exp_001.sbatch`.
 
 ## Measurement principles
 
-1. Energy is read from the NVML cumulative energy counter
-   (`nvmlDeviceGetTotalEnergyConsumption`) at CUDA-synchronized boundaries.
-   Power sampling at 50 ms is retained and integrated as a consistency check on
-   the same sensor, not as independent validation.
+1. Two energy quantities are recorded for every window at CUDA-synchronized
+   boundaries: the NVML cumulative energy counter delta and the trapezoid
+   integral of 50 ms power readings. The instrumentation gate (EXP-001)
+   decides per platform which one is the energy source, by testing whether
+   the counter is monotonic, updates often enough, and agrees with the
+   integral; the other remains a recorded consistency check on the same
+   sensor. On the RTX 4090 Laptop GPU the counter failed that test
+   (DECISIONS.md D-009), so that platform uses the power integral.
 2. The torch device is resolved to the physical GPU by UUID, so measurements
    under `CUDA_VISIBLE_DEVICES` remapping (SLURM) attach to the right device.
    The mapping is verified and recorded in every manifest.
