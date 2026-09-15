@@ -9,7 +9,8 @@ import pytest
 
 from tomlml.measure.census import classify_command, count_commands_from_events
 from tomlml.measure.protocol import (
-    ProtocolSettings, measure_window, plausibility_ceiling, regime_label, settle_under_load,
+    ProtocolSettings, capped_fraction, measure_window, plausibility_ceiling, regime_label,
+    settle_under_load,
 )
 
 
@@ -66,9 +67,34 @@ def test_measure_window_calibrates_and_labels_regime(fake_device):
     assert regime_label(w, 61.0) == "capped"          # 60 W against a 61 W limit is within 3 percent
     assert regime_label(w, 175.0) == "uncapped"
     assert regime_label(w, None) == "uncapped"
+    assert capped_fraction(w) == 0.0
     w2 = measure_window(fake_device, lambda: time.sleep(0.002), s, sync_fn=lambda: None, label="y",
                         per_call_s=0.004, check_processes=False)
     assert w2.n_calls == 50
+
+
+def test_regime_label_uses_capped_sample_fraction(fake_nvml, fake_device):
+    from tomlml.measure.meter import StateSample, summarize_window
+
+    def s(t, mask):
+        return StateSample(t_wall=t, t_perf=t, power_w=60.0, temp_c=30, sm_clock_mhz=1000,
+                           mem_clock_mhz=1000, energy_mj=None, throttle_mask=mask)
+
+    # one carried-over SwPowerCap (0x4) sample out of ten: not capped
+    samples = [s(0.1 * i, 0x4 if i == 0 else 0x0) for i in range(10)]
+    w = summarize_window("x", 0.0, 1.0, 0.0, 1.0, None, None, samples, [], [], 0.1)
+    assert capped_fraction(w) == pytest.approx(0.1)
+    assert "SwPowerCap" in w.throttle_reasons            # the union still records it
+    assert regime_label(w, 175.0) == "uncapped"
+    # majority at the cap: capped
+    samples = [s(0.1 * i, 0x4 if i < 6 else 0x0) for i in range(10)]
+    w = summarize_window("y", 0.0, 1.0, 0.0, 1.0, None, None, samples, [], [], 0.1)
+    assert regime_label(w, 175.0) == "capped"
+    # no masks at all: fall back to the power criterion
+    samples = [s(0.1 * i, None) for i in range(10)]
+    w = summarize_window("z", 0.0, 1.0, 0.0, 1.0, None, None, samples, [], [], 0.1)
+    assert capped_fraction(w) is None
+    assert regime_label(w, 61.0) == "capped" and regime_label(w, 175.0) == "uncapped"
 
 
 def test_count_commands_from_events():

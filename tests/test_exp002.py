@@ -196,3 +196,101 @@ def test_exp002_quick_grid_is_used_under_quick(fake_nvml, tmp_path, monkeypatch)
     assert summary["quick"] is True and summary["gate_valid"] is False
     assert summary["grid"]["shapes"] == [512] and summary["n_windows"] == 2
     assert summary["settings"]["window_s"] == pytest.approx(0.5)   # floor of 0.5 s after scaling
+
+
+def test_exp002_crash_and_resume(fake_nvml, tmp_path, monkeypatch):
+    """Crash after five measured windows, resume in the same directory, finish
+    with every window measured exactly once and the same seeded order."""
+    import tomlml.experiments.exp_002_lowrank_crossover as exp
+
+    def factory(d, fracs, batches, K):
+        return SleepShape(d, fracs, batches, K, exact_fail={(0.0625, 64)} if d == 1024 else None)
+
+    original_run = exp.run
+    monkeypatch.setattr(exp, "run", lambda ctx: original_run(ctx, shape_factory=factory, census_fn=fake_census))
+    monkeypatch.setattr(exp, "l2_cache_bytes",
+                        lambda device_index=0, fallback_bytes=0: {"bytes": 64 * 2**20, "source": "fallback (test)"})
+    real_measure = exp.measure_window
+    state = {"n": 0, "crash_at": 6}
+
+    def crashing_measure(*a, **kw):
+        state["n"] += 1
+        if state["n"] == state["crash_at"]:
+            raise RuntimeError("simulated power loss")
+        return real_measure(*a, **kw)
+
+    monkeypatch.setattr(exp, "measure_window", crashing_measure)
+    cfg_path = tmp_path / "exp002.yaml"
+    cfg_path.write_text(yaml.safe_dump(CONFIG))
+    runner = _load_runner()
+    with pytest.raises(RuntimeError, match="simulated power loss"):
+        runner.main(["--config", str(cfg_path), "--out-root", str(tmp_path), "--run-id", "cr"])
+
+    out = tmp_path / "experiments" / "exp_002_lowrank-crossover" / "a100-sxm4-40gb" / "cr"
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["status"] == "failed" and "simulated power loss" in manifest["error"]
+    ledger = (out / "results" / "windows.jsonl").read_text().splitlines()
+    assert len(ledger) == 5
+    first_labels = [json.loads(line)["label"] for line in ledger]
+    assert (out / "results" / "shape_d512.json").exists()
+    assert not (out / "results" / "shape_d1024.json").exists()
+    assert not (out / "results" / "windows.json").exists()
+    with gzip.open(out / "samples" / "d512.csv.gz", "rt") as f:
+        lines = f.read().splitlines()
+    assert lines[0].startswith("window,") and len({ln.split(",")[0] for ln in lines[1:]}) == 5
+
+    # a fresh (non-resume) run must never reuse the directory
+    with pytest.raises(FileExistsError):
+        runner.main(["--config", str(cfg_path), "--out-root", str(tmp_path), "--run-id", "cr"])
+
+    # resume refuses a code change unless overridden
+    real_git = runner.git_info
+    monkeypatch.setattr(runner, "git_info", lambda root=None: dict(real_git(root), commit="0" * 40))
+    assert runner.main(["--config", str(cfg_path), "--out-root", str(tmp_path), "--resume", "cr"]) == 3
+    monkeypatch.setattr(runner, "git_info", real_git)
+
+    # resume proper: no more crashes, nothing re-measured
+    state["crash_at"] = -1
+    measured_before = state["n"]
+    rc = runner.main(["--config", str(cfg_path), "--out-root", str(tmp_path), "--resume", "cr"])
+    assert rc == 0
+    summary = json.loads((out / "results" / "summary.json").read_text())
+    assert summary["resumed"] is True
+    assert summary["n_windows"] == 28
+    assert summary["n_windows_skipped_on_resume"] == 5
+    assert summary["n_windows_measured_this_session"] == 23
+    assert state["n"] - measured_before == 23
+    windows = json.loads((out / "results" / "windows.json").read_text())
+    labels = [w["label"] for w in windows]
+    assert len(labels) == len(set(labels)) == 28
+    assert labels[:5] == first_labels                       # ledger order preserved
+    assert sum(1 for w in windows if w["measured_in_resume"]) == 23
+    assert set(summary["shapes"]) == {"512", "1024"} and set(summary["settles"]) == {"512", "1024"}
+    assert summary["n_configurations"] == 14 and len(summary["excluded"]) == 1
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["status"] == "completed" and len(manifest["resumes"]) == 1
+    assert manifest["resumes"][0]["previous_status"] == "failed"
+    assert manifest["resumes"][0]["commit_differs"] is False
+    assert (out / "environment.resume1.json").exists()
+    ledger = (out / "results" / "windows.jsonl").read_text().splitlines()
+    assert len(ledger) == 28
+    with gzip.open(out / "samples" / "d512.csv.gz", "rt") as f:
+        lines = f.read().splitlines()
+    assert lines.count(lines[0]) == 1                         # one header even across gzip members
+    assert len({ln.split(",")[0] for ln in lines[1:]}) == 16
+
+    # a completed run cannot be resumed
+    assert runner.main(["--config", str(cfg_path), "--out-root", str(tmp_path), "--resume", "cr"]) == 3
+
+
+def test_ledger_drops_partial_last_line(tmp_path):
+    from tomlml.experiments.exp_002_lowrank_crossover import append_ledger, load_ledger
+
+    path = tmp_path / "windows.jsonl"
+    append_ledger(path, {"label": "a", "x": 1})
+    append_ledger(path, {"label": "b", "x": 2})
+    with open(path, "a", encoding="utf-8") as f:
+        f.write('{"label": "c", "x": ')          # crash mid-write
+    recs = load_ledger(path)
+    assert [r["label"] for r in recs] == ["a", "b"]
+    assert load_ledger(tmp_path / "missing.jsonl") == []

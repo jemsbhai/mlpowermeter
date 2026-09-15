@@ -33,6 +33,7 @@ class RunContext:
     torch_device: int = 0
     seed: int = 42
     rng: Any = None                # numpy.random.Generator
+    resume: bool = False           # True when continuing an interrupted run in its own directory
     extra: Dict[str, Any] = field(default_factory=dict)
 
     @property

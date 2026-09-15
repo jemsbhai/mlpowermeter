@@ -35,6 +35,7 @@ from .meter import (
 )
 from .protocol import (
     ProtocolSettings,
+    capped_fraction,
     measure_window,
     plausibility_ceiling,
     regime_label,
@@ -50,6 +51,6 @@ __all__ = [
     "EnergyMeter", "ENERGY_SOURCES", "MeasurementWindow", "StateSample", "StateSampler",
     "integrate_power", "make_cuda_sync", "mask_implausible_power", "measure_idle", "no_sync",
     "summarize_window", "wait_for_thermal_settle", "write_samples_csv",
-    "ProtocolSettings", "measure_window", "plausibility_ceiling", "regime_label",
+    "ProtocolSettings", "capped_fraction", "measure_window", "plausibility_ceiling", "regime_label",
     "settle_under_load", "classify_command", "command_census", "count_commands_from_events",
 ]

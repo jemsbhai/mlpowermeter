@@ -103,6 +103,26 @@ python scripts/run_experiment.py --config configs/exp_001_instrumentation.yaml
 
 On the cluster the same command runs inside `scripts/slurm/exp_001.sbatch`.
 
+### Resuming an interrupted run
+
+Long experiments (EXP-002 onward) write every measured window to an
+append-only ledger (`results/windows.jsonl`, fsync'd) and every shape's
+pre-measurement artifacts to `results/shape_d<d>.json` before the shape's
+windows start, so a crash or power loss keeps everything measured so far.
+To continue in the same run directory:
+
+```powershell
+python scripts/run_experiment.py --config configs/exp_002_lowrank_crossover.yaml --resume <run-id>
+```
+
+The run id is the directory name (for example `20260915T200000`). A resume
+uses the run's own frozen `config.yaml`, re-applies the seeds so the
+randomized order is unchanged, skips every window already in the ledger,
+and records itself in `manifest.json` with a fresh environment snapshot.
+It refuses to resume across a code change (the commit must match the
+original run's), because a code change is a new experiment under the
+protocol; `--resume-any-commit` overrides that and is recorded.
+
 ## Measurement principles
 
 1. Two energy quantities are recorded for every window at CUDA-synchronized

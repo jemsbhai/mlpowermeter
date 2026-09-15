@@ -139,12 +139,17 @@ def read_json(path: Path) -> Any:
         return json.load(f)
 
 
+def experiment_folder(exp_id: str, name: str) -> str:
+    """``exp_NNN_<slug>`` folder name under experiments/."""
+    exp_num = exp_id.upper().replace("EXP-", "").replace("EXP", "")
+    return f"exp_{int(exp_num):03d}_{slugify(name)}"
+
+
 def make_experiment_dir(root: Path, exp_id: str, name: str, platform_tag: str,
                         run_id: Optional[str] = None) -> Path:
     """Create ``experiments/exp_NNN_name/<platform>/<run_id>/`` with its
     subdirectories. Raises if the run directory already exists."""
-    exp_num = exp_id.upper().replace("EXP-", "").replace("EXP", "")
-    folder = f"exp_{int(exp_num):03d}_{slugify(name)}"
+    folder = experiment_folder(exp_id, name)
     run_id = run_id or new_run_id()
     out = Path(root) / "experiments" / folder / platform_tag / run_id
     if out.exists():

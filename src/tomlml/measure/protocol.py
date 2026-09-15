@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from ..workloads.reference import calibrate_calls, run_for
 from .meter import EnergyMeter, MeasurementWindow
+from .nvml import decode_throttle_reasons
 
 
 @dataclass
@@ -124,10 +125,24 @@ def settle_under_load(dev: Any, run_once: Callable[[], None], settings: Protocol
     return result
 
 
-def regime_label(window: MeasurementWindow, power_limit_enforced_w: Optional[float]) -> str:
-    """``capped`` when the window ran at the power cap (SwPowerCap seen or mean
-    power within 3 percent of the enforced limit), else ``uncapped``."""
-    if "SwPowerCap" in window.throttle_reasons:
+def capped_fraction(window: MeasurementWindow) -> Optional[float]:
+    """Fraction of the window's samples whose throttle mask carries
+    ``SwPowerCap``; None when no sample has a mask."""
+    masks = [s.throttle_mask for s in window.samples if s.throttle_mask is not None]
+    if not masks:
+        return None
+    n_capped = sum(1 for m in masks if "SwPowerCap" in decode_throttle_reasons(m))
+    return n_capped / len(masks)
+
+
+def regime_label(window: MeasurementWindow, power_limit_enforced_w: Optional[float],
+                 capped_sample_fraction_min: float = 0.5) -> str:
+    """``capped`` when the window ran at the power cap: at least
+    ``capped_sample_fraction_min`` of its samples report ``SwPowerCap``, or
+    mean power is within 3 percent of the enforced limit; else ``uncapped``.
+    A single carried-over sample at the cap does not label the window."""
+    frac = capped_fraction(window)
+    if frac is not None and frac >= capped_sample_fraction_min:
         return "capped"
     if power_limit_enforced_w and window.mean_power_w is not None \
             and window.mean_power_w >= 0.97 * power_limit_enforced_w:
