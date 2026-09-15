@@ -151,3 +151,24 @@ measurement's validity.
 decisions are made on evidence and the gates above.
 
 **Rationale.** Standing rule for the program.
+
+---
+
+## D-008 (2026-09-15) Deterministic algorithm selection is not forced in measured workloads
+
+**Decision.** `set_all_seeds` seeds Python, NumPy, and torch (CPU and CUDA)
+from one master seed but does not enable
+`torch.use_deterministic_algorithms(True)` by default. Runs that need bitwise
+reproducible outputs (not energy) opt in with `deterministic: true` in their
+config, and the flag's state is recorded in `seed.json` and
+`environment.json` for every run.
+
+**Rationale.** Forcing deterministic algorithms changes which kernels run,
+and therefore the physical work being measured. The quantity under study is
+the energy of the algorithm as it is normally executed. Reproducibility of
+energy results comes from repeated measurement with reported uncertainty,
+not from bitwise-identical outputs.
+
+**Consequences.** Any experiment that compares outputs numerically (exact
+function tests, such as dense versus factorized maps) declares its numerical
+tolerance in the logbook entry rather than relying on determinism.
