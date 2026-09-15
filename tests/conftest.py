@@ -9,6 +9,7 @@ counter-versus-integral consistency check be tested for real.
 
 from __future__ import annotations
 
+import ctypes
 import time
 import types
 from typing import Any, Dict, List
@@ -30,9 +31,13 @@ class NVMLError_NoPermission(NVMLError):
     pass
 
 
-class _Handle:
+class _Handle(ctypes.Structure):
+    """Mimics a real NVML handle: a ctypes object containing a pointer, which
+    cannot be deep-copied or pickled (the real one broke dataclasses.asdict)."""
+    _fields_ = [("idx", ctypes.c_int), ("ptr", ctypes.c_void_p)]
+
     def __init__(self, idx: int):
-        self.idx = idx
+        super().__init__(idx, None)
 
 
 class _Pci:

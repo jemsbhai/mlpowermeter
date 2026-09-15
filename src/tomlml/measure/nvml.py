@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import statistics
 import warnings
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 with warnings.catch_warnings():
@@ -147,6 +147,21 @@ def system_info() -> Dict[str, Any]:
 # Device enumeration and resolution
 # --------------------------------------------------------------------------- #
 
+def _public_fields(obj: Any) -> Dict[str, Any]:
+    """Dataclass fields as a plain dict, skipping the NVML handle.
+
+    ``dataclasses.asdict`` is not used because it deep-copies every field and
+    the real handle is a ctypes pointer, which cannot be copied.
+    """
+    out: Dict[str, Any] = {}
+    for f in fields(obj):
+        if f.name == "handle":
+            continue
+        value = getattr(obj, f.name)
+        out[f.name] = list(value) if isinstance(value, list) else value
+    return out
+
+
 @dataclass
 class DeviceInfo:
     nvml_index: int
@@ -157,9 +172,7 @@ class DeviceInfo:
     handle: Any = field(default=None, repr=False, compare=False)
 
     def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
-        d.pop("handle", None)
-        return d
+        return _public_fields(self)
 
 
 def list_devices() -> List[DeviceInfo]:
@@ -228,9 +241,7 @@ class ResolvedDevice:
     handle: Any = field(default=None, repr=False, compare=False)
 
     def to_dict(self) -> Dict[str, Any]:
-        d = asdict(self)
-        d.pop("handle", None)
-        return d
+        return _public_fields(self)
 
 
 def resolve_device(
