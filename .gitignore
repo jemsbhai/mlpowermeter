@@ -1,0 +1,79 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+venv/
+.venv/
+env/
+.ipynb_checkpoints/
+
+# ---- Secrets (never committed) ----
+.env
+.env.local
+*.key
+*.pem
+*secrets*
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Data ----
+# Raw and processed datasets are not committed. Provenance (DATA_README.md)
+# and checksums (checksums.sha256) are committed so every run can verify inputs.
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# ---- Experiment outputs ----
+# Committed: frozen config, environment.json, seed.json, manifest.json,
+# results/*.json, results/*.csv, small raw sample logs, figures.
+# Ignored: checkpoints and other heavy binary artifacts (use Git LFS if >50 MB
+# ever needs to be shared).
+experiments/**/checkpoints/
+experiments/**/*.pt
+experiments/**/*.pth
+experiments/**/*.ckpt
+experiments/**/*.npy
+experiments/**/*.npz
+experiments/**/*.h5
+experiments/**/*.parquet
+
+# ---- Profiler outputs (large, regenerable) ----
+*.ncu-rep
+*.nsys-rep
+*.qdrep
+*.qdstrm
+*.sqlite
+
+# ---- SLURM ----
+slurm-*.out
+slurm-*.err
+
+# ---- LaTeX ----
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.synctex.gz
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.toc
+paper/*.nav
+paper/*.snm
