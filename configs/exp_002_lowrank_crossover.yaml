@@ -1,0 +1,62 @@
+# EXP-002: exact low-rank crossover, dense versus factorized GEMM (inference).
+# Pre-registered in LOGBOOK.md (EXP-002); STUDY_DESIGN.md H2a and H3c;
+# protocol D-010. Full run about 8.5 hours per platform. --quick uses the
+# quick_grid below (about 2 minutes) and is a pipeline check only.
+
+experiment_id: EXP-002
+name: lowrank-crossover
+experiment: exp_002_lowrank_crossover
+phase: pilot
+
+grid:
+  shapes: [512, 1024, 2048, 4096]          # d_in = d_out = d
+  rank_fractions: [0.015625, 0.03125, 0.0625, 0.125, 0.25, 0.375, 0.5, 0.75]
+  batches: [1, 4, 16, 64, 256, 1024, 4096]
+  realizations: [dense, factorized]
+  reps: 3
+  calibration_shapes: [512, 2048]
+  heldout_shapes: [1024, 4096]
+
+quick_grid:                                # replaces grid under --quick
+  shapes: [512, 1024]
+  rank_fractions: [0.0625, 0.25, 0.5]
+  batches: [1, 64, 4096]
+  realizations: [dense, factorized]
+  reps: 2
+  calibration_shapes: [512]
+  heldout_shapes: [1024]
+
+workload:
+  dtype: float32
+  allow_tf32: false
+  data_seed: 1234
+  weight_cycling_l2_multiple: 2            # D-010 item 5: K = ceil(2 L2 / (4 d^2))
+  exactness_tolerance_rel_frobenius: 1.0e-4   # D-010 item 6
+
+measurement:
+  window_s: 20                             # D-010 item 1; quick runs scale it by the quick factor
+  warmup_s: 2                              # same-configuration warmup before every window
+  settle_load:                             # thermal settle under a mid-grid load before each shape's sequence
+    rank_fraction: 0.25
+    batch: 256
+    realization: dense
+  thermal_settle_threshold_c: 1.0
+  thermal_settle_window_s: 5.0
+  thermal_settle_timeout_s: 300
+  census_warmup_calls: 5                   # D-010 item 4
+
+analysis:
+  models: [P0, M1, M2]
+  selection: leave_one_cell_out            # over calibration (d, B) cells only
+  bootstrap_resamples: 1000
+  bootstrap_seed_component: bootstrap
+
+criteria:
+  heldout_median_ape_max: 0.20             # E1
+  crossover_coverage_min_cells: 12         # E2, of 14 held-out (d, B) cells
+  b1_rank_fraction_max: 0.25               # E3: r* at B = 1 at most d/4 (or dense wins throughout)
+  monotonicity_spearman_min: 0.8           # E4
+  exactness_max_excluded_fraction: 0.05    # E5
+  regret_max: 0.05                         # E6 (reported, not gating)
+  contaminated_windows_max: 0              # E7
+  implausible_power_fraction_max: 0.01     # E7
