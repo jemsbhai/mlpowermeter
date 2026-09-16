@@ -53,7 +53,8 @@ analysis:
 
 criteria:
   heldout_median_ape_max: 0.20             # E1
-  crossover_coverage_min_cells: 12         # E2, of 14 held-out (d, B) cells
+  crossover_coverage_min_cells: 12         # E2, of 14 held-out (d, B) cells: prediction and measurement intervals overlap
+  crossover_point_factor_max: 1.5          # E2 secondary point rule, reported only
   b1_rank_fraction_max: 0.25               # E3: r* at B = 1 at most d/4 (or dense wins throughout)
   monotonicity_spearman_min: 0.8           # E4
   exactness_max_excluded_fraction: 0.05    # E5

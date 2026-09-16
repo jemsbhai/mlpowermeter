@@ -539,6 +539,40 @@ H2a is supported on a platform if E1 to E5 and E7 pass; E6 is reported.
 A failure is reported as such; no re-run of the same protocol to chase a
 pass.
 
+### Addendum 2026-09-15 22:20 (America/New_York): analysis pre-registered; E2 amended before any full-run data was analyzed
+
+The analysis (`src/tomlml/analysis/exp_002.py`, `scripts/analyze_exp_002.py`)
+was written and tested on synthetic runs generated from a known three-term
+model while the rtx4090-laptop full run was in progress and before any of
+its windows were inspected. Two declarations and one amendment:
+
+1. Fitting convention: non-negative least squares on calibration windows
+   with relative weighting (rows scaled by 1/energy), so the fit minimizes
+   squared relative error, matching the percentage-error criteria.
+2. Model selection: leave-one-(d, B)-cell-out cross-validation over the 14
+   calibration cells, scored by mean per-fold median APE; ties go to M1.
+3. E2 amended. As registered, E2 asked whether the measured r* lies inside
+   the bootstrap interval of the predicted r*. That interval carries only
+   prediction uncertainty; on a synthetic run with 1 percent window noise
+   the calibration fit was so tight that the interval was 0.1 percent wide
+   while the measured r* has about 1 percent repetition noise, so a model
+   predicting r* within 1 to 2 percent failed every cell. Amended rule: two
+   bootstrap intervals per held-out cell, one from resampling calibration
+   windows within configuration (prediction uncertainty) and one from
+   resampling the held-out repetitions within configuration (measurement
+   uncertainty), 1000 resamples each; a cell is a hit when the two 95
+   percent intervals overlap on the encoded scale (numeric r*, none_dense as
+   0, none_factorized as infinity). Threshold unchanged: at least 12 of 14.
+   Reported alongside, not gating: the point rule (same verdict kind and
+   numeric r* within a factor of 1.5), and whether the measured point lies
+   inside the prediction interval (the original wording).
+
+Also noted from the synthetic tests: the three-term model can produce r*
+falling with batch size when the memory coefficient is large relative to the
+compute coefficient (the intermediate tensor's traffic scales with B r), so
+E3 and E4 are physical predictions about this hardware, not consequences of
+the model's form.
+
 ### Results
 
 (filled in per platform after completion)
