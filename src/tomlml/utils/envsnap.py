@@ -18,7 +18,7 @@ from .manifest import git_info, utc_now_iso, local_now_iso
 
 PACKAGES_OF_INTEREST: List[str] = [
     "torch", "torchvision", "torchaudio", "numpy", "scipy", "scikit-learn",
-    "pandas", "pyyaml", "nvidia-ml-py", "pynvml", "gymnasium", "stable-baselines3",
+    "pandas", "pyyaml", "matplotlib", "nvidia-ml-py", "pynvml", "gymnasium", "stable-baselines3",
     "xgboost", "lightgbm", "cuml", "cupy", "triton", "tomlml",
 ]
 
