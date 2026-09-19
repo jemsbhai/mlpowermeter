@@ -1,0 +1,199 @@
+{
+  "config": {
+    "_sources": [
+      {
+        "path": "E:/data/code/claudecode/mlpowermeter/configs/base.yaml",
+        "sha256": "0ef0e65b098381650787031f05795036fbdbd875ad3d8cfe033bdb4315a693c3"
+      },
+      {
+        "path": "E:/data/code/claudecode/mlpowermeter/configs/platform/rtx4090-laptop.yaml",
+        "sha256": "90c94c539139de93f3afb7963e0eef310573d6dc54c25c17f688aed5aad4ba5f"
+      },
+      {
+        "path": "E:/data/code/claudecode/mlpowermeter/configs/exp_002_lowrank_crossover.yaml",
+        "sha256": "0cc09bb1999b63e5dfb0db0287eafbe6d2eaf9f4a3c43320584b216486ef5877"
+      }
+    ],
+    "allow_dirty": false,
+    "analysis": {
+      "bootstrap_resamples": 1000,
+      "bootstrap_seed_component": "bootstrap",
+      "models": [
+        "P0",
+        "M1",
+        "M2"
+      ],
+      "selection": "leave_one_cell_out"
+    },
+    "criteria": {
+      "b1_rank_fraction_max": 0.25,
+      "contaminated_windows_max": 0,
+      "crossover_coverage_min_cells": 12,
+      "exactness_max_excluded_fraction": 0.05,
+      "heldout_median_ape_max": 0.2,
+      "implausible_power_fraction_max": 0.01,
+      "monotonicity_spearman_min": 0.8,
+      "regret_max": 0.05
+    },
+    "deterministic": false,
+    "energy_source": "power_integral",
+    "experiment": "exp_002_lowrank_crossover",
+    "experiment_id": "EXP-002",
+    "grid": {
+      "batches": [
+        1,
+        4,
+        16,
+        64,
+        256,
+        1024,
+        4096
+      ],
+      "calibration_shapes": [
+        512,
+        2048
+      ],
+      "heldout_shapes": [
+        1024,
+        4096
+      ],
+      "rank_fractions": [
+        0.015625,
+        0.03125,
+        0.0625,
+        0.125,
+        0.25,
+        0.375,
+        0.5,
+        0.75
+      ],
+      "realizations": [
+        "dense",
+        "factorized"
+      ],
+      "reps": 3,
+      "shapes": [
+        512,
+        1024,
+        2048,
+        4096
+      ]
+    },
+    "measurement": {
+      "census_warmup_calls": 5,
+      "counter_update_period_ms": 100,
+      "default_window_s": 20,
+      "idle_power_w": 4.4,
+      "min_window_s_power_capped": 0.5,
+      "min_window_s_uncapped": 20,
+      "power_limit_enforced_w": 175,
+      "power_update_period_ms": 500,
+      "settle_load": {
+        "batch": 256,
+        "rank_fraction": 0.25,
+        "realization": "dense"
+      },
+      "thermal_settle_threshold_c": 1.0,
+      "thermal_settle_timeout_s": 300,
+      "thermal_settle_window_s": 5.0,
+      "warmup_s": 2,
+      "warmup_until_thermal_settle": true,
+      "window_s": 20
+    },
+    "name": "lowrank-crossover",
+    "phase": "pilot",
+    "platform_tag": "rtx4090-laptop",
+    "probe_control_permissions": false,
+    "quick": false,
+    "quick_factor": 1.0,
+    "quick_grid": {
+      "batches": [
+        1,
+        64,
+        4096
+      ],
+      "calibration_shapes": [
+        512
+      ],
+      "heldout_shapes": [
+        1024
+      ],
+      "rank_fractions": [
+        0.0625,
+        0.25,
+        0.5
+      ],
+      "realizations": [
+        "dense",
+        "factorized"
+      ],
+      "reps": 2,
+      "shapes": [
+        512,
+        1024
+      ]
+    },
+    "sample_interval_s": 0.05,
+    "seed": 42,
+    "torch_device": 0,
+    "workload": {
+      "allow_tf32": false,
+      "data_seed": 1234,
+      "dtype": "float32",
+      "exactness_tolerance_rel_frobenius": 0.0001,
+      "weight_cycling_l2_multiple": 2
+    }
+  },
+  "created_local": "2026-09-15T18:07:08-04:00",
+  "created_utc": "2026-09-15T22:07:08+00:00",
+  "device": {
+    "method": "torch_uuid",
+    "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "notes": [],
+    "nvml_index": 0,
+    "pci_bus_id": "00000000:01:00.0",
+    "torch_index": 0,
+    "torch_name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "torch_uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+    "uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+    "uuid_verified": true
+  },
+  "experiment_id": "EXP-002",
+  "finished_local": "2026-09-16T03:14:36-04:00",
+  "finished_utc": "2026-09-16T07:14:36+00:00",
+  "git": {
+    "branch": "main",
+    "commit": "70d7c61ee2f76fdf96a5d508ff9e9c9e3a8bde75",
+    "dirty": false,
+    "error": null,
+    "root": "E:/data/code/claudecode/mlpowermeter"
+  },
+  "hostname": "muntaserPC2024",
+  "name": "lowrank-crossover",
+  "output_dir": "E:/data/code/claudecode/mlpowermeter/experiments/exp_002_lowrank-crossover/rtx4090-laptop/20260915T180708",
+  "platform_tag": "rtx4090-laptop",
+  "quick": false,
+  "quick_factor": 1.0,
+  "resumes": [
+    {
+      "commit": "7087068e39c02353ed8e2585f1cb2155129c5d34",
+      "commit_differs": true,
+      "dirty": false,
+      "n": 1,
+      "previous_error": null,
+      "previous_status": "running",
+      "started_utc": "2026-09-16T00:19:01+00:00"
+    }
+  ],
+  "run_id": "20260915T180708",
+  "seed": 42,
+  "status": "completed",
+  "summary": {
+    "analysis_pending": true,
+    "gate_pass": null,
+    "gate_valid": true,
+    "summary_path": "E:/data/code/claudecode/mlpowermeter/experiments/exp_002_lowrank-crossover/rtx4090-laptop/20260915T180708/results/summary.json"
+  },
+  "torch_device": 0,
+  "wall_time_s": 24935.825328000006
+}

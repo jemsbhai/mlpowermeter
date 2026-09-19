@@ -1,0 +1,125 @@
+{
+  "applications_clock_mem_mhz": {
+    "error": "NotSupported",
+    "value": null
+  },
+  "applications_clock_sm_mhz": {
+    "error": "NotSupported",
+    "value": null
+  },
+  "compute_mode": {
+    "error": null,
+    "value": 0
+  },
+  "device": {
+    "method": "torch_uuid",
+    "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "notes": [],
+    "nvml_index": 0,
+    "pci_bus_id": "00000000:01:00.0",
+    "torch_index": 0,
+    "torch_name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "torch_uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+    "uuid": "gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734",
+    "uuid_verified": true
+  },
+  "energy_counter_mj": {
+    "error": null,
+    "value": 1572057293
+  },
+  "environment": {
+    "COMPUTERNAME": "MUNTASERPC2024",
+    "CUDA_VISIBLE_DEVICES": null,
+    "HOSTNAME": null,
+    "NVIDIA_VISIBLE_DEVICES": null,
+    "SLURM_CPUS_PER_TASK": null,
+    "SLURM_GPUS_ON_NODE": null,
+    "SLURM_JOB_GPUS": null,
+    "SLURM_JOB_ID": null,
+    "SLURM_JOB_NAME": null,
+    "SLURM_JOB_NODELIST": null,
+    "SLURM_JOB_PARTITION": null,
+    "SLURM_STEP_GPUS": null,
+    "TOMLML_NVML_UUID": null
+  },
+  "mem_clock_max_mhz": {
+    "error": null,
+    "value": 9001
+  },
+  "mem_clock_mhz": {
+    "error": null,
+    "value": 9001
+  },
+  "memory_total_bytes": {
+    "error": null,
+    "value": 17171480576
+  },
+  "persistence_mode": {
+    "error": "NotSupported",
+    "value": null
+  },
+  "power_limit_constraints_w": {
+    "error": null,
+    "value": [
+      5.0,
+      175.0
+    ]
+  },
+  "power_limit_default_w": {
+    "error": null,
+    "value": 80.0
+  },
+  "power_limit_enforced_w": {
+    "error": null,
+    "value": 175.0
+  },
+  "power_limit_management_w": {
+    "error": "NotSupported",
+    "value": null
+  },
+  "power_samples_api": {
+    "error": "NotFound",
+    "supported": false
+  },
+  "power_w": {
+    "error": null,
+    "value": 593.506
+  },
+  "running_processes": [],
+  "sm_clock_max_mhz": {
+    "error": null,
+    "value": 3105
+  },
+  "sm_clock_mhz": {
+    "error": null,
+    "value": 1455
+  },
+  "system": {
+    "cuda_driver_version": 13020,
+    "cuda_driver_version_error": null,
+    "cuda_driver_version_str": "13.2",
+    "driver_version": "595.79",
+    "driver_version_error": null,
+    "nvml_version": "13.595.79",
+    "nvml_version_error": null
+  },
+  "temperature_c": {
+    "error": null,
+    "value": 42
+  },
+  "throttle": {
+    "api": "nvmlDeviceGetCurrentClocksEventReasons",
+    "error": null,
+    "mask": 1,
+    "reasons": [
+      "GpuIdle"
+    ]
+  },
+  "utilization": {
+    "error": null,
+    "value": {
+      "gpu": 0,
+      "memory": 0
+    }
+  }
+}

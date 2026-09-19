@@ -1,0 +1,83 @@
+2026-09-15 18:07:08,525 INFO EXP-002 lowrank-crossover on rtx4090-laptop (run 20260915T180708) -> E:\data\code\claudecode\mlpowermeter\experiments\exp_002_lowrank-crossover\rtx4090-laptop\20260915T180708
+2026-09-15 18:07:08,525 INFO config sources: base.yaml, rtx4090-laptop.yaml, exp_002_lowrank_crossover.yaml
+2026-09-15 18:07:08,525 INFO energy source setting: power_integral
+2026-09-15 18:07:08,525 INFO device: nvml index 0, NVIDIA GeForce RTX 4090 Laptop GPU, uuid gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734, resolved by torch_uuid, uuid_verified=True
+2026-09-15 18:07:08,671 INFO EXP-002 grid: shapes [512, 1024, 2048, 4096], fractions [0.015625, 0.03125, 0.0625, 0.125, 0.25, 0.375, 0.5, 0.75], batches [1, 4, 16, 64, 256, 1024, 4096], reps 3; window 20.0 s, warmup 2.0 s, energy source power_integral, plausibility ceiling 350.0 W, L2 67108864 (torch.cuda.get_device_properties)
+2026-09-15 18:07:09,524 INFO shape d=512: 128 weight sets (128.0 MB dense footprint), ranks {'0.015625': 8, '0.03125': 16, '0.0625': 32, '0.125': 64, '0.25': 128, '0.375': 192, '0.5': 256, '0.75': 384}
+2026-09-15 18:08:38,216 INFO   census and calibration done for d=512 (112 configurations)
+2026-09-15 18:08:46,246 INFO   settled under load at 70 C after 8.0 s (timed_out=False, 496443 calls)
+2026-09-15 18:18:49,413 INFO   [25/1344] d512_f0.5_B1024_dense_rep0: 0.006867 J/call, 174.1 W, capped, 20.2 s; elapsed 12 min, remaining about 616 min
+2026-09-15 18:29:39,899 INFO   [50/1344] d512_f0.125_B256_dense_rep0: 0.002826 J/call, 168.1 W, capped, 21.6 s; elapsed 23 min, remaining about 583 min
+2026-09-15 18:39:58,441 INFO   [75/1344] d512_f0.0625_B4096_dense_rep0: 0.02148 J/call, 174.6 W, capped, 20.3 s; elapsed 33 min, remaining about 555 min
+2026-09-15 18:50:27,357 INFO   [100/1344] d512_f0.015625_B16_dense_rep2: 0.001521 J/call, 70.7 W, uncapped, 23.3 s; elapsed 43 min, remaining about 539 min
+2026-09-15 19:01:15,105 INFO   [125/1344] d512_f0.5_B4096_factorized_rep0: 0.02133 J/call, 174.0 W, capped, 20.2 s; elapsed 54 min, remaining about 528 min
+2026-09-15 19:11:50,490 INFO   [150/1344] d512_f0.375_B4_dense_rep2: 0.0009801 J/call, 67.3 W, uncapped, 23.6 s; elapsed 65 min, remaining about 515 min
+2026-09-15 19:21:58,014 INFO   [175/1344] d512_f0.015625_B16_factorized_rep1: 0.00132 J/call, 52.7 W, uncapped, 21.8 s; elapsed 75 min, remaining about 500 min
+2026-09-15 19:32:26,592 INFO   [200/1344] d512_f0.75_B4096_factorized_rep1: 0.03482 J/call, 174.5 W, capped, 20.0 s; elapsed 85 min, remaining about 488 min
+2026-09-15 19:43:08,350 INFO   [225/1344] d512_f0.25_B256_factorized_rep2: 0.00303 J/call, 83.4 W, uncapped, 25.6 s; elapsed 96 min, remaining about 477 min
+2026-09-15 19:53:57,981 INFO   [250/1344] d512_f0.5_B64_factorized_rep0: 0.002845 J/call, 70.0 W, uncapped, 23.0 s; elapsed 107 min, remaining about 467 min
+2026-09-15 20:19:00,910 INFO RESUME 1 of EXP-002 lowrank-crossover on rtx4090-laptop (run 20260915T180708) at commit 7087068e39c02353ed8e2585f1cb2155129c5d34 (commit differs from the original run, override recorded)
+2026-09-15 20:19:00,910 INFO device: nvml index 0, NVIDIA GeForce RTX 4090 Laptop GPU, uuid gpu-a19463b0-61fe-b2f4-c5fe-0463d481b734, resolved by torch_uuid, uuid_verified=True
+2026-09-15 20:19:01,063 INFO resuming: 261 windows already in the ledger, 1 shapes with artifacts
+2026-09-15 20:19:01,082 INFO EXP-002 grid: shapes [512, 1024, 2048, 4096], fractions [0.015625, 0.03125, 0.0625, 0.125, 0.25, 0.375, 0.5, 0.75], batches [1, 4, 16, 64, 256, 1024, 4096], reps 3; window 20.0 s, warmup 2.0 s, energy source power_integral, plausibility ceiling 350.0 W, L2 67108864 (torch.cuda.get_device_properties)
+2026-09-15 20:19:01,434 INFO shape d=512: 128 weight sets (128.0 MB dense footprint), ranks {'0.015625': 8, '0.03125': 16, '0.0625': 32, '0.125': 64, '0.25': 128, '0.375': 192, '0.5': 256, '0.75': 384}; 261 of 336 windows already measured
+2026-09-15 20:20:32,706 INFO   census and calibration done for d=512 (112 configurations)
+2026-09-15 20:20:41,720 INFO   settled under load at 68 C after 9.0 s (timed_out=False, 525413 calls)
+2026-09-15 20:30:12,153 INFO   [286/1344] d512_f0.03125_B4096_dense_rep0: 0.02176 J/call, 174.7 W, capped, 20.9 s; elapsed 11 min, remaining about 473 min
+2026-09-15 20:39:39,574 INFO   [311/1344] d512_f0.25_B1_factorized_rep2: 0.0009434 J/call, 36.4 W, uncapped, 20.3 s; elapsed 21 min, remaining about 426 min
+2026-09-15 20:49:04,146 INFO   [336/1344] d512_f0.375_B4_dense_rep1: 0.0008926 J/call, 70.6 W, uncapped, 21.2 s; elapsed 30 min, remaining about 404 min
+2026-09-15 20:49:04,194 INFO shape d=512 finished in 30 min
+2026-09-15 20:49:04,451 INFO shape d=1024: 32 weight sets (128.0 MB dense footprint), ranks {'0.015625': 16, '0.03125': 32, '0.0625': 64, '0.125': 128, '0.25': 256, '0.375': 384, '0.5': 512, '0.75': 768}; 0 of 336 windows already measured
+2026-09-15 20:50:42,214 INFO   census and calibration done for d=1024 (112 configurations)
+2026-09-15 20:50:47,312 INFO   settled under load at 76 C after 5.1 s (timed_out=False, 118770 calls)
+2026-09-15 21:00:03,824 INFO   [361/1344] d1024_f0.0625_B64_factorized_rep0: 0.002009 J/call, 63.1 W, uncapped, 20.0 s; elapsed 41 min, remaining about 403 min
+2026-09-15 21:09:13,799 INFO   [386/1344] d1024_f0.25_B256_dense_rep2: 0.007476 J/call, 174.8 W, capped, 20.4 s; elapsed 50 min, remaining about 385 min
+2026-09-15 21:18:34,691 INFO   [411/1344] d1024_f0.125_B4_dense_rep1: 0.002257 J/call, 123.4 W, uncapped, 17.9 s; elapsed 60 min, remaining about 370 min
+2026-09-15 21:27:53,395 INFO   [436/1344] d1024_f0.75_B64_dense_rep0: 0.003612 J/call, 163.0 W, capped, 20.6 s; elapsed 69 min, remaining about 357 min
+2026-09-15 21:37:09,080 INFO   [461/1344] d1024_f0.03125_B4096_dense_rep1: 0.07718 J/call, 174.4 W, capped, 20.2 s; elapsed 78 min, remaining about 345 min
+2026-09-15 21:46:30,887 INFO   [486/1344] d1024_f0.75_B4_factorized_rep1: 0.004079 J/call, 105.0 W, uncapped, 19.9 s; elapsed 87 min, remaining about 334 min
+2026-09-15 21:55:53,164 INFO   [511/1344] d1024_f0.0625_B64_dense_rep0: 0.003609 J/call, 162.9 W, capped, 18.7 s; elapsed 97 min, remaining about 323 min
+2026-09-15 22:05:13,416 INFO   [536/1344] d1024_f0.375_B16_factorized_rep1: 0.003073 J/call, 81.0 W, uncapped, 19.9 s; elapsed 106 min, remaining about 312 min
+2026-09-15 22:14:34,019 INFO   [561/1344] d1024_f0.015625_B16_dense_rep0: 0.002416 J/call, 122.9 W, uncapped, 19.6 s; elapsed 116 min, remaining about 302 min
+2026-09-15 22:23:58,909 INFO   [586/1344] d1024_f0.25_B16_dense_rep2: 0.002399 J/call, 124.9 W, uncapped, 20.5 s; elapsed 125 min, remaining about 291 min
+2026-09-15 22:33:20,931 INFO   [611/1344] d1024_f0.03125_B4_factorized_rep2: 0.001134 J/call, 52.2 W, uncapped, 19.7 s; elapsed 134 min, remaining about 281 min
+2026-09-15 22:42:40,756 INFO   [636/1344] d1024_f0.125_B1_dense_rep1: 0.001479 J/call, 105.2 W, uncapped, 20.6 s; elapsed 144 min, remaining about 271 min
+2026-09-15 22:51:57,373 INFO   [661/1344] d1024_f0.25_B4096_factorized_rep0: 0.04015 J/call, 174.8 W, capped, 20.3 s; elapsed 153 min, remaining about 261 min
+2026-09-15 22:56:05,333 INFO shape d=1024 finished in 127 min
+2026-09-15 22:56:05,816 INFO shape d=2048: 8 weight sets (128.0 MB dense footprint), ranks {'0.015625': 32, '0.03125': 64, '0.0625': 128, '0.125': 256, '0.25': 512, '0.375': 768, '0.5': 1024, '0.75': 1536}; 0 of 336 windows already measured
+2026-09-15 22:57:44,462 INFO   census and calibration done for d=2048 (112 configurations)
+2026-09-15 22:57:49,759 INFO   settled under load at 78 C after 5.3 s (timed_out=False, 41614 calls)
+2026-09-15 23:02:58,873 INFO   [686/1344] d2048_f0.75_B1_factorized_rep0: 0.007217 J/call, 138.8 W, uncapped, 20.1 s; elapsed 164 min, remaining about 254 min
+2026-09-15 23:12:24,786 INFO   [711/1344] d2048_f0.125_B1024_factorized_rep2: 0.02217 J/call, 173.9 W, capped, 20.2 s; elapsed 173 min, remaining about 244 min
+2026-09-15 23:21:49,714 INFO   [736/1344] d2048_f0.375_B16_dense_rep0: 0.006661 J/call, 174.6 W, capped, 19.7 s; elapsed 183 min, remaining about 234 min
+2026-09-15 23:31:10,993 INFO   [761/1344] d2048_f0.015625_B1024_factorized_rep1: 0.006381 J/call, 168.8 W, capped, 20.2 s; elapsed 192 min, remaining about 224 min
+2026-09-15 23:40:25,958 INFO   [786/1344] d2048_f0.015625_B1_factorized_rep2: 0.001317 J/call, 56.9 W, uncapped, 21.5 s; elapsed 201 min, remaining about 214 min
+2026-09-15 23:49:49,522 INFO   [811/1344] d2048_f0.015625_B4096_dense_rep1: 0.2714 J/call, 174.9 W, capped, 20.0 s; elapsed 211 min, remaining about 204 min
+2026-09-15 23:59:09,555 INFO   [836/1344] d2048_f0.5_B4_dense_rep1: 0.006377 J/call, 169.2 W, capped, 19.6 s; elapsed 220 min, remaining about 194 min
+2026-09-16 00:08:22,332 INFO   [861/1344] d2048_f0.0625_B256_factorized_rep0: 0.00579 J/call, 168.5 W, capped, 17.4 s; elapsed 229 min, remaining about 185 min
+2026-09-16 00:17:43,542 INFO   [886/1344] d2048_f0.015625_B4_dense_rep0: 0.006462 J/call, 171.1 W, capped, 20.2 s; elapsed 239 min, remaining about 175 min
+2026-09-16 00:27:06,105 INFO   [911/1344] d2048_f0.015625_B16_dense_rep1: 0.006638 J/call, 174.7 W, capped, 20.1 s; elapsed 248 min, remaining about 165 min
+2026-09-16 00:36:34,531 INFO   [936/1344] d2048_f0.25_B256_factorized_rep2: 0.01404 J/call, 174.6 W, capped, 20.2 s; elapsed 258 min, remaining about 156 min
+2026-09-16 00:45:55,994 INFO   [961/1344] d2048_f0.03125_B256_dense_rep1: 0.02187 J/call, 174.7 W, capped, 20.2 s; elapsed 267 min, remaining about 146 min
+2026-09-16 00:55:18,761 INFO   [986/1344] d2048_f0.015625_B4096_factorized_rep0: 0.02114 J/call, 174.6 W, capped, 20.3 s; elapsed 276 min, remaining about 136 min
+2026-09-16 01:03:30,691 INFO shape d=2048 finished in 127 min
+2026-09-16 01:03:31,657 INFO shape d=4096: 2 weight sets (128.0 MB dense footprint), ranks {'0.015625': 64, '0.03125': 128, '0.0625': 256, '0.125': 512, '0.25': 1024, '0.375': 1536, '0.5': 2048, '0.75': 3072}; 0 of 336 windows already measured
+2026-09-16 01:05:14,877 INFO   census and calibration done for d=4096 (112 configurations)
+2026-09-16 01:05:20,916 INFO   settled under load at 78 C after 6.0 s (timed_out=False, 14451 calls)
+2026-09-16 01:06:29,279 INFO   [1011/1344] d4096_f0.75_B16_factorized_rep1: 0.03555 J/call, 174.9 W, capped, 20.0 s; elapsed 287 min, remaining about 128 min
+2026-09-16 01:15:58,179 INFO   [1036/1344] d4096_f0.5_B1024_dense_rep1: 0.2608 J/call, 174.8 W, capped, 20.1 s; elapsed 297 min, remaining about 118 min
+2026-09-16 01:25:32,229 INFO   [1061/1344] d4096_f0.75_B1024_dense_rep2: 0.26 J/call, 174.8 W, capped, 20.0 s; elapsed 307 min, remaining about 108 min
+2026-09-16 01:35:05,708 INFO   [1086/1344] d4096_f0.5_B1024_factorized_rep1: 0.2773 J/call, 174.9 W, capped, 20.1 s; elapsed 316 min, remaining about 99 min
+2026-09-16 01:44:31,009 INFO   [1111/1344] d4096_f0.015625_B1_factorized_rep0: 0.001356 J/call, 52.6 W, uncapped, 20.3 s; elapsed 325 min, remaining about 89 min
+2026-09-16 01:54:01,584 INFO   [1136/1344] d4096_f0.5_B1_dense_rep1: 0.01833 J/call, 148.7 W, uncapped, 20.0 s; elapsed 335 min, remaining about 80 min
+2026-09-16 02:03:55,828 INFO   [1161/1344] d4096_f0.125_B64_dense_rep1: 0.02948 J/call, 174.7 W, capped, 20.1 s; elapsed 345 min, remaining about 70 min
+2026-09-16 02:13:37,934 INFO   [1186/1344] d4096_f0.75_B16_dense_rep1: 0.02339 J/call, 174.9 W, capped, 20.0 s; elapsed 355 min, remaining about 61 min
+2026-09-16 02:23:11,545 INFO   [1211/1344] d4096_f0.015625_B4_dense_rep1: 0.01906 J/call, 152.6 W, uncapped, 20.0 s; elapsed 364 min, remaining about 51 min
+2026-09-16 02:32:47,676 INFO   [1236/1344] d4096_f0.5_B16_factorized_rep0: 0.02494 J/call, 174.8 W, capped, 20.0 s; elapsed 374 min, remaining about 41 min
+2026-09-16 02:42:32,598 INFO   [1261/1344] d4096_f0.03125_B1024_factorized_rep1: 0.02187 J/call, 174.3 W, capped, 20.6 s; elapsed 384 min, remaining about 32 min
+2026-09-16 02:52:01,273 INFO   [1286/1344] d4096_f0.25_B16_factorized_rep2: 0.0104 J/call, 173.8 W, capped, 19.7 s; elapsed 393 min, remaining about 22 min
+2026-09-16 03:01:41,964 INFO   [1311/1344] d4096_f0.5_B4_dense_rep0: 0.01904 J/call, 153.7 W, uncapped, 20.0 s; elapsed 403 min, remaining about 13 min
+2026-09-16 03:11:30,166 INFO   [1336/1344] d4096_f0.03125_B256_factorized_rep1: 0.008858 J/call, 172.1 W, capped, 19.8 s; elapsed 412 min, remaining about 3 min
+2026-09-16 03:14:36,787 INFO shape d=4096 finished in 131 min
+2026-09-16 03:14:36,869 INFO EXP-002 measurement complete: 1344 windows (1083 this session, 261 skipped on resume), 0 excluded configurations, 0 contaminated windows, 416 min this session. Run scripts/analyze_exp_002.py on this run directory.
+2026-09-16 03:14:36,869 INFO status completed; manifest E:\data\code\claudecode\mlpowermeter\experiments\exp_002_lowrank-crossover\rtx4090-laptop\20260915T180708\manifest.json
