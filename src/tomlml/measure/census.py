@@ -46,6 +46,13 @@ def count_commands_from_events(events: Iterable[Any], n_calls: int,
     n_kernels = sum(kernels.values())
     total = n_kernels + memcpy + memset
     n = max(1, int(n_calls))
+    if total == 0:
+        # No device events at all: the profiler did not see the GPU (CUPTI
+        # unavailable, for example). Report unknown rather than zero so no
+        # model is fed a dispatch feature that is identically zero.
+        return {"n_calls": n, "kernels_per_call": None, "memcpy_per_call": None, "memset_per_call": None,
+                "commands_per_call": None, "kernel_names_per_call": {}, "distinct_kernels": 0,
+                "no_device_events": True}
     return {
         "n_calls": n,
         "kernels_per_call": n_kernels / n,
@@ -54,6 +61,7 @@ def count_commands_from_events(events: Iterable[Any], n_calls: int,
         "commands_per_call": total / n,
         "kernel_names_per_call": {k: v / n for k, v in sorted(kernels.items())},
         "distinct_kernels": len(kernels),
+        "no_device_events": False,
     }
 
 
@@ -76,7 +84,15 @@ def command_census(run_once: Callable[[], None], sync_fn: Callable[[], None],
     def is_device(evt: Any) -> bool:
         return getattr(evt, "device_type", None) == cuda_type
 
-    out = count_commands_from_events(prof.events(), n_calls, is_device)
+    events = list(prof.events())
+    out = count_commands_from_events(events, n_calls, is_device)
+    if out.get("no_device_events"):
+        # second chance: older bindings attach kernels to the CPU op events
+        kernels = [k for evt in events for k in (getattr(evt, "kernels", None) or [])]
+        if kernels:
+            out = count_commands_from_events(kernels, n_calls, lambda k: True)
+            out["source"] = "FunctionEvent.kernels"
     out["method"] = "torch.profiler"
     out["warmup_calls"] = warmup_calls
+    out["n_events_total"] = len(events)
     return out

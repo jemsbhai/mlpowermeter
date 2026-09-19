@@ -14,8 +14,8 @@ import yaml
 
 from tomlml.analysis.exp_002 import (
     analyze, crossover_from_ratios, crossovers_from_energies, encode, evaluate_criteria,
-    fit_relative_nnls, gate_passes, interval_hit, intervals_overlap, load_run, point_factor_hit, regret,
-    spearman_monotone,
+    fit_relative_nnls, gate_passes, interval_hit, intervals_overlap, load_run, m3_energy, point_factor_hit,
+    regret, spearman_monotone,
 )
 from tomlml.to_model.gemm import dense_descriptor, factorized_descriptor
 from tomlml.workloads.lowrank import rank_for
@@ -174,9 +174,10 @@ def test_analysis_recovers_generating_model_and_crossovers(tmp_path):
     assert cell["measured_interval"][0] <= cell["measured_r_star"] <= cell["measured_interval"][1]
     assert cell["predicted_interval"][0] <= cell["predicted_r_star"] <= cell["predicted_interval"][1]
     assert cell["predicted_r_star"] == pytest.approx(cell["measured_r_star"], rel=0.05)
-    assert set(a["criteria"]) == {"E1_heldout_median_ape", "E2_crossover_coverage", "E3_b1_gap",
+    assert set(a["criteria"]) >= {"E1_heldout_median_ape", "E2_crossover_coverage", "E3_b1_gap",
                                   "E4_monotonicity", "E5_exactness_exclusions", "E6_model_regret",
                                   "E7_isolation_and_plausibility"}
+    assert a["criteria"]["E8_m3_crossover_point_hits"]["gating"] is False   # criteria.m3 absent here
     assert a["criteria"]["E1_heldout_median_ape"]["pass"] and a["criteria"]["E7_isolation_and_plausibility"]["pass"]
     assert a["criteria"]["E6_model_regret"]["gating"] is False
     assert a["regret"]["model_regret_rel"] < 0.02 and a["regret"]["n_cells"] == 20
@@ -221,17 +222,113 @@ def test_regret_counts_wrong_choices():
 def test_evaluate_criteria_gating_and_reporting():
     a = {"selected_model": "M1",
          "heldout_prediction": {"M1": {"median_ape": 0.1}, "P0": {"median_ape": 0.6}},
-         "coverage": {"hits": 3, "n_cells": 4},
-         "b1_gap": {"512": {"pass": True}},
-         "monotonicity": {"512": {"rho": 0.9, "constant": False}},
+         "coverage": {"hits": 3, "n_cells": 4, "point_factor_hits": 4, "point_factor": 1.5},
+         "b1_gap": {"512": {"pass": True}, "1024": {"pass": False}},
+         "monotonicity": {"512": {"rho": 0.9, "constant": False}, "1024": {"rho": 0.1, "constant": False}},
          "exclusions": {"fraction": 0.0},
          "regret": {"model_regret_rel": 0.2, "flops_regret_rel": 0.5},
          "quality": {"contaminated_windows": 0, "implausible_fraction": 0.0}}
     c = evaluate_criteria(a, CRITERIA)
     assert c["E6_model_regret"]["pass"] is False and c["E6_model_regret"]["gating"] is False
-    assert gate_passes(c)                                    # E6 does not gate
+    assert c["E3_b1_gap"]["pass"] is False and c["E4_monotonicity"]["pass"] is False   # all shapes by default
+    assert not gate_passes(c)
+    # v3 switches: point rule for E2, and the B=1 and monotonicity clauses restricted to named shapes
+    v3 = dict(CRITERIA, crossover_coverage_rule="point", crossover_coverage_min_cells=4,
+              b1_gap_shapes=[512], monotonicity_shapes=[512])
+    c3 = evaluate_criteria(a, v3)
+    assert c3["E2_crossover_coverage"]["pass"] is True and c3["E2_crossover_coverage"]["value"] == "4 of 4"
+    assert c3["E3_b1_gap"]["pass"] is True and c3["E4_monotonicity"]["pass"] is True
+    assert gate_passes(c3)                                   # E6 does not gate
     a["monotonicity"]["512"] = {"rho": 0.3, "constant": False}
-    assert not gate_passes(evaluate_criteria(a, CRITERIA))
+    assert not gate_passes(evaluate_criteria(a, v3))
+
+
+M3_TRUE = {"t_launch_s": 12e-6, "bandwidth_Bps": 4e11, "throughput_MACps": 1e13,
+           "p_floor_w": 40.0, "p_memory_w": 140.0, "p_compute_w": 175.0}
+
+
+def make_m3_run(tmp_path: Path, noise: float = 0.02, register_m3: bool = True, seed: int = 11) -> Path:
+    """Synthetic run generated from the max-of-times, regime-power form with
+    laptop-like parameters, on the full pre-registered grid."""
+    rng = np.random.default_rng(seed)
+    grid = {"shapes": [512, 1024, 2048, 4096], "rank_fractions": [1/64, 1/32, 1/16, 1/8, 1/4, 3/8, 1/2, 3/4],
+            "batches": [1, 4, 16, 64, 256, 1024, 4096], "realizations": ["dense", "factorized"], "reps": 3,
+            "calibration_shapes": [512, 2048], "heldout_shapes": [1024, 4096]}
+    run_dir = tmp_path / "m3run"
+    (run_dir / "results").mkdir(parents=True)
+    descriptors, windows = {}, []
+    theta = [M3_TRUE[k] for k in ("t_launch_s", "bandwidth_Bps", "throughput_MACps", "p_floor_w", "p_memory_w", "p_compute_w")]
+    for d in grid["shapes"]:
+        for f in grid["rank_fractions"]:
+            r = rank_for(d, f)
+            for B in grid["batches"]:
+                for rz in grid["realizations"]:
+                    key = f"d{d}_f{f:g}_B{B}_{rz}"
+                    if rz == "dense":
+                        m1, cmds = dense_descriptor(B, d, d), 1.0
+                    else:
+                        m1, cmds = factorized_descriptor(B, d, d, r), 2.0
+                    descriptors[key] = {"m1": m1, "m2": m1, "factorized_weights_fit_l2": False,
+                                        "commands_per_call": cmds, "per_call_s_calibration": 1e-4}
+                    e, t = m3_energy(theta, np.array([m1["n_mac"]], float),
+                                     np.array([4 * sum(m1["words"].values())], float), np.array([cmds]))
+                    for rep in range(grid["reps"]):
+                        jitter = math.exp(rng.normal(0, noise))
+                        val = float(e[0]) * jitter
+                        windows.append({"key": key, "label": f"{key}_rep{rep}", "d": d, "f": f, "r": r, "B": B,
+                                        "realization": rz, "rep": rep, "energy_per_call_j": val,
+                                        "energy_per_call_integral_j": val, "energy_per_call_counter_j": None,
+                                        "per_call_s": float(t[0]) * jitter,
+                                        "regime": "uncapped", "contaminated": False, "n_samples": 400,
+                                        "power_implausible_samples": 0, "counter_monotonic": None,
+                                        "mean_temp_c": 60.0, "mean_sm_clock_mhz": 2000.0, "mean_power_w": 100.0,
+                                        "duration_s": 20.0})
+    summary = {"run_id": "m3synthetic", "platform_tag": "fake", "quick": False, "grid": grid,
+               "settings": {"energy_source": "power_integral", "power_limit_enforced_w": 175.0}, "excluded": [],
+               "contaminated_windows": 0, "samples_total": 400 * len(windows),
+               "power_implausible_samples_total": 0, "l2_cache": {"bytes": 64 * 2**20}}
+    crit = dict(CRITERIA, crossover_coverage_min_cells=12)
+    if register_m3:
+        crit["m3"] = {"crossover_point_hits_min": 12, "point_factor": 1.5,
+                      "b1_small_d_fraction_max": 0.30, "b1_large_d_fraction_min": 0.45}
+    (run_dir / "results" / "windows.json").write_text(json.dumps(windows))
+    (run_dir / "results" / "descriptors.json").write_text(json.dumps(descriptors))
+    (run_dir / "results" / "summary.json").write_text(json.dumps(summary))
+    (run_dir / "config.yaml").write_text(yaml.safe_dump({"seed": 42, "criteria": crit,
+                                                         "analysis": {"bootstrap_resamples": 20}}))
+    return run_dir
+
+
+def test_m3_recovers_max_of_times_world_and_registered_criteria(tmp_path):
+    a = analyze(load_run(make_m3_run(tmp_path)))
+    th = a["m3"]["fit"]["theta"]
+    assert a["m3"]["fit"]["fitted_on_time"] is True
+    for k, v in M3_TRUE.items():
+        assert th[k] == pytest.approx(v, rel=0.15), k
+    assert a["m3"]["fit"]["calibration_median_ape_time"] < 0.05
+    assert a["m3"]["heldout"]["median_ape"] < 0.06
+    assert a["m3"]["registered"] is True
+    assert a["m3"]["point_hits"] >= 12 and a["m3"]["n_cells"] == 14
+    # the transition size follows from the fitted floor and bandwidth
+    assert a["m3"]["transition"]["d_transition"] == pytest.approx(math.sqrt(12e-6 * 4e11 / 4), rel=0.3)
+    c = a["criteria"]
+    assert c["E8_m3_crossover_point_hits"]["gating"] is True and c["E8_m3_crossover_point_hits"]["pass"]
+    assert c["E9_m3_heldout_median_ape"]["gating"] is False
+    assert c["E10_b1_crossover_rises_with_d"]["gating"] is True
+    # in this world the additive model cannot follow the floor: M3 beats it on held-out energy
+    assert a["m3"]["heldout"]["median_ape"] < a["heldout_prediction"][a["selected_model"]]["median_ape"]
+    assert c["E9_m3_heldout_median_ape"]["pass"] is True
+
+
+def test_m3_is_exploratory_without_registration(tmp_path):
+    a = analyze(load_run(make_m3_run(tmp_path, register_m3=False)))
+    assert a["m3"]["registered"] is False
+    c = a["criteria"]
+    assert c["E8_m3_crossover_point_hits"]["gating"] is False
+    assert "exploratory" in c["E8_m3_crossover_point_hits"]["note"]
+    assert c["E10_b1_crossover_rises_with_d"]["gating"] is False
+    # E1 to E7 still decide the gate on their own
+    assert gate_passes({k: v for k, v in c.items() if not k.startswith(("E8", "E9", "E10"))}) == gate_passes(c)
 
 
 def test_cli_writes_analysis_and_figures(tmp_path):

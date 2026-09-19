@@ -112,3 +112,8 @@ def test_count_commands_from_events():
     assert out["kernel_names_per_call"] == {"ampere_sgemm_128x64_nn": 1.0, "gemv2N_kernel": 0.5}
     assert classify_command("Memcpy HtoD") == "memcpy" and classify_command("Memset (Device)") == "memset"
     assert classify_command("volta_sgemm") == "kernel"
+    # no device events at all: unknown, never zero
+    out = count_commands_from_events([ev("aten::mm", cpu), ev("cudaLaunchKernel", cpu)], n_calls=2,
+                                     is_device_event=lambda e: e.device_type == cuda)
+    assert out["commands_per_call"] is None and out["no_device_events"] is True
+    assert out["kernels_per_call"] is None
