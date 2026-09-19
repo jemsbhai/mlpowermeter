@@ -35,7 +35,41 @@ Rules:
   after a temperature settle is negligible (+0.006 W). A fixed warmup does
   not reach steady state after a change of load level; warm up until the
   temperature is stable under the workload (EXP-001).
+- `torch.profiler` with the CUDA activity recorded no device events on the
+  Windows laptop in EXP-002 (attribution pending); the census must report
+  unknown, never zero, and the laptop's command counts are declared (one
+  per GEMM) until the Nsight Systems cross-check confirms them (D-012).
 - a100-sxm4-40gb: pending its own gate run.
+
+### Low-rank crossover (EXP-002, rtx4090-laptop, declared command counts)
+
+- H2a as registered is refuted on the laptop. The crossover rank fraction
+  at B = 1 rises with map size d: 0.021, 0.198, 0.461, 0.497 of d for d =
+  512, 1024, 2048, 4096, because the dense GEMV moves from dispatch bound
+  (14 microseconds per call at 64 W) to memory bound (64 MB in 123
+  microseconds at 520 GB/s, 149 W). At fixed d it rises with batch only
+  where dispatch matters (d at or below 1024) and is flat near d/2 above.
+  FLOPs (r* = d/2 always) is wrong by a factor of 24 at (512, 1), 2.5 at
+  (1024, 1), and right within 10 percent at d at or above 2048.
+- The additive TOML model with one command per GEMM, fitted on d in {512,
+  2048}, predicts held-out (1024, 4096) energy at 12.4 percent median error
+  (P0 FLOPs: 60 percent), the B = 1 crossovers within 3 percent (206 versus
+  202 at 1024; 1972 versus 2034 at 4096), and 13 of 14 held-out cells
+  within a factor of 1.5. Fitted costs: 0.64 mJ per command, 15.3 pJ per
+  MAC, 1.03 nJ per HBM word.
+- Dispatch overhead is a time floor at reduced power, not a constant energy:
+  two launches at d = 512, B = 1 take 1.8x the time of one at half the
+  power (33 W, SM downclocked to 1455 MHz) for equal energy. An additive
+  per-command energy overpredicts those cells by about 50 percent; the
+  max-of-times model (M3, 16.6 microseconds per command, 443 GB/s, 46 W
+  floor, transition size 1358) captures the regimes but predicts energy
+  worse (24 percent) because cuBLAS throughput is shape dependent (2 to 24
+  TFLOPS across the grid).
+- Dense GEMM energy is independent of the weight data to within 2 percent
+  across eight weight sets of different rank; repetition CV of energy per
+  call over 448 configurations: median 0.76 percent, p90 4.7 percent.
+- The A100 run is the prospective test of the restated H2a' (predictions
+  A1 to A7 filed 2026-09-18 in LOGBOOK.md).
 
 ## Inherited prior results (context only, not confirmatory for this study)
 
@@ -60,6 +94,42 @@ labeled retrospective and cited to the original work.
   the seed of this study's crossover hypotheses.
 
 ## Raw findings log
+
+### 2026-09-18 -- EXP-002: Exact low-rank crossover, rtx4090-laptop (run 20260915T180708)
+
+**Key result:** H2a NOT supported as registered (E2, E3, E4 fail under
+criteria v2); the crossover rank at B = 1 rises with d from 0.021 d (512)
+to 0.497 d (4096); the additive TOML model with declared command counts
+predicts held-out energy at 12.4 percent median error and the B = 1
+crossovers within 3 percent.
+
+**Details:**
+- 1344 windows of 20 s, 3 repetitions, 224 configurations x 2
+  realizations; 0 excluded, 0 contaminated; repetition CV median 0.76
+  percent. Run interrupted once (external kill, cause not established) and
+  resumed with no loss.
+- Census failure: profiler saw no device events; commands recorded as 0;
+  first analysis (2026-09-16) inverted by it (E1 fail 23.4 percent);
+  corrected analysis uses one command per GEMM, labeled declared.
+- Criteria v2: E1 pass 0.124; E2 fail 3 of 14 (point rule 13 of 14); E3
+  fail at 4096 (measured 0.497 d); E4 fail (0.79 at 1024, -0.04 at 4096);
+  E5, E7 pass; E6 0.06 percent (summed); E8 11 of 14, E9 fail, E10 pass
+  (exploratory).
+- Coefficients (M1): 0.637 mJ per command, 15.3 pJ per MAC, 1.03 nJ per
+  HBM word. M3 (joint energy and time): 16.6 microseconds per command, 443
+  GB/s, 17.4 TFLOPS effective, 46 W floor, d_t = 1358.
+- Per-call regimes: d = 512, B = 1 dense 14.0 microseconds at 64 W;
+  factorized (two launches) 25.4 microseconds at 33 W, 1455 MHz; d = 4096,
+  B = 1 dense 123 microseconds at 149 W (520 GB/s); B = 4096 at the 175 W
+  cap, 23.6 TFLOPS.
+
+**Statistical tests:** relative-weighted NNLS fits; leave-one-cell-out
+selection (M1 0.331 versus M2 0.338); 1000-resample bootstrap intervals on
+both sides of E2; Spearman for E4.
+
+**Notes:** H2a restated as H2a' with d in it (D-012); A100 predictions A1
+to A7 filed before the A100 run. The nsys cross-check of the declared
+counts is pending.
 
 ### 2026-09-15 -- EXP-001: Instrumentation gate, rtx4090-laptop (run 20260915T164645)
 

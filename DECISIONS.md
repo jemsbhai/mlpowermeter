@@ -288,3 +288,57 @@ entry after EXP-002 to EXP-004. Changes to the catalog or hypotheses are
 dated entries here, before the affected data is collected. A100 predictions
 for each spine experiment are filed in LOGBOOK.md with a commit hash before
 the corresponding job is submitted.
+
+---
+
+## D-012 (2026-09-18) After the laptop EXP-002 run: H2a restated with size in it, criteria v3, M3 registered, census hardening
+
+**Decision.**
+
+1. H2a is replaced by H2a'. For exact-rank maps, the crossover rank
+   fraction r*(B=1)/d rises with d from far below 1/2 to about 1/2 as the
+   dense GEMV moves from dispatch bound to memory bound, with the transition
+   size d_t = sqrt(t_launch x BW / 4 bytes) set by the platform's launch
+   floor and bandwidth; at fixed d below d_t, r* rises with B; at d well
+   above d_t, r* is near d/2 for every B. FLOPs (r* = d/2 always) is wrong
+   by a factor that grows as d falls below d_t. The additive TOML model with
+   measured command counts predicts r* within a factor of 1.5 on held-out
+   shapes (E2 point rule) and energy within 20 percent median (E1).
+2. Criteria v3 for EXP-002 runs submitted from this date (the A100): E2
+   gates on the point rule (factor 1.5) with interval overlap reported; E3
+   and E4 apply to the dispatch-relevant held-out shape (d = 1024; E4
+   threshold 0.7, set from the laptop's 0.79); the memory-bound shape is
+   tested by E10 instead; E8 (M3 point rule, 12 of 14) and E10 (the
+   d-structure) gate; E6 and E9 are reported. The laptop run stays
+   evaluated under v2 (its frozen config) and reported as NOT SUPPORTED.
+3. M3, the max-of-times model with regime power (t_call = max(commands x
+   t_launch, bytes/BW, MACs/R); E = p_floor t_call + (p_active - p_floor)
+   t_active; p_active = p_compute where compute time dominates, else
+   p_memory), is registered as a secondary predictor: fitted jointly on
+   energy and per-call time with the powers ordered within the cap and
+   multi-started. It is exploratory on the laptop (fitted after the data
+   were seen) and registered for the A100 and for EXP-003.
+4. Command census: a census that sees no device events reports unknown,
+   never zero; every analysis treats a non-positive count as unknown and
+   falls back to the declared GEMM count, flagging `census_fallback_used`.
+   The Nsight Systems cross-check on the laptop (D-010 item 4) is now
+   required before the laptop's declared counts are used in the paper;
+   `scripts/diag_profiler.py` attributes the profiler failure.
+5. Regret: a per-cell relative regret (mean over held-out cells of the
+   extra energy of the chosen realization relative to the cheaper one) is
+   added as a reported metric; the registered summed regret stays.
+
+**Rationale.** The laptop run (LOGBOOK.md EXP-002 results, 2026-09-18)
+refuted H2a as stated: the B = 1 gap holds only below the transition size,
+and monotonicity in B holds only there. The dependence on d is the larger
+effect and was missing from the hypothesis. The census failure (zero
+device events, written as zero) was a silent instrumentation error that
+inverted the first analysis. The interval-overlap E2 tests exact agreement
+given 2 percent measurement intervals and cannot be passed by a 12 percent
+model that makes every decision correctly.
+
+**Consequences.** The A100 run is the prospective test of H2a' (LOGBOOK.md
+addendum of 2026-09-18, tag `exp-002-a100-predictions`); Ameera's job is
+submitted only after her EXP-001 gate passes and this decision is pushed.
+EXP-003 (training side) is designed with d in its hypothesis from the
+start.

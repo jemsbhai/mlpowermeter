@@ -52,12 +52,23 @@ analysis:
   bootstrap_seed_component: bootstrap
 
 criteria:
-  heldout_median_ape_max: 0.20             # E1
-  crossover_coverage_min_cells: 12         # E2, of 14 held-out (d, B) cells: prediction and measurement intervals overlap
-  crossover_point_factor_max: 1.5          # E2 secondary point rule, reported only
-  b1_rank_fraction_max: 0.25               # E3: r* at B = 1 at most d/4 (or dense wins throughout)
-  monotonicity_spearman_min: 0.8           # E4
+  version: 3                               # v3 (D-012): applies to runs submitted after 2026-09-18 (A100). The laptop run
+                                           # 20260915T180708 was evaluated under v2 (its frozen config.yaml).
+  heldout_median_ape_max: 0.20             # E1: selected linear model (M1 or M2)
+  crossover_coverage_rule: point           # E2 (v3): measured and predicted r* within a factor of crossover_point_factor_max,
+                                           # same verdict kind; interval overlap reported alongside
+  crossover_coverage_min_cells: 12         # E2, of 14 held-out (d, B) cells
+  crossover_point_factor_max: 1.5
+  b1_rank_fraction_max: 0.25               # E3: r* at B = 1 at most d/4 (or dense wins throughout), model on the same side
+  b1_gap_shapes: [1024]                    # E3 (v3): dispatch-relevant shape only; at 4096 the B=1 map is memory-bound (E10)
+  monotonicity_spearman_min: 0.7           # E4 (v3): threshold set from the laptop's 0.79 at d = 1024
+  monotonicity_shapes: [1024]              # E4 (v3): at 4096 r*(B) is flat near d/2 by mechanism; reported, not gated
   exactness_max_excluded_fraction: 0.05    # E5
   regret_max: 0.05                         # E6 (reported, not gating)
   contaminated_windows_max: 0              # E7
   implausible_power_fraction_max: 0.01     # E7
+  m3:                                      # D-012: registered for runs after the laptop's (A100, EXP-003)
+    crossover_point_hits_min: 12           # E8: M3 crossover within a factor of point_factor of measured, 12 of 14 held-out cells
+    point_factor: 1.5
+    b1_small_d_fraction_max: 0.30          # E10: measured r*(B=1)/d at the smallest held-out shape (1024)
+    b1_large_d_fraction_min: 0.45          # E10: measured r*(B=1)/d at the largest held-out shape (4096)

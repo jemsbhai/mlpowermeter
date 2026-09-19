@@ -73,7 +73,7 @@ Structured metadata plus narrative reasoning. Follows the lab-runner protocol.
 | ID | Title | Platform | Phase | Status |
 |----|-------|----------|-------|--------|
 | EXP-001 | Instrumentation validation (gate G0) | rtx4090-laptop, a100-sxm4-40gb | pilot | rtx4090-laptop PASS (power integral); a100 pending |
-| EXP-002 | Exact low-rank crossover, dense versus factorized GEMM (inference) | rtx4090-laptop, a100-sxm4-40gb | pilot | planned |
+| EXP-002 | Exact low-rank crossover, dense versus factorized GEMM (inference) | rtx4090-laptop, a100-sxm4-40gb | pilot | rtx4090-laptop complete, H2a NOT supported as stated (mechanism found, H2a' registered); a100 pending |
 
 ---
 
@@ -206,15 +206,15 @@ count as contamination; any compute process that is not ours does.
 
 ### Results
 
-(filled in per platform after completion)
+See the addenda below (rtx4090-laptop, 2026-09-15; a100-sxm4-40gb pending).
 
 ### Observations
 
-(filled in after completion)
+See the addenda below.
 
 ### Interpretation
 
-(filled in after completion)
+See the addenda below.
 
 ### Artifacts
 
@@ -575,15 +575,162 @@ the model's form.
 
 ### Results
 
-(filled in per platform after completion)
+#### rtx4090-laptop, run `20260915T180708` (addendum 2026-09-18, America/New_York)
 
-### Observations
+**Run.** Started 2026-09-15 18:07 at commit `70d7c61e` (clean tree), 20 s
+windows, energy source power integral, L2 64 MiB from the device, 128, 32,
+8, 2 weight sets for d = 512, 1024, 2048, 4096. The first session measured
+261 windows and was killed from outside at about 19:54 (manifest status
+still `running` at the resume; no exception, no traceback; cause not
+established, sleep or a forced stop suspected; AC sleep and hibernate
+timeouts had been set to never, lid action not changed). Resumed at 20:19
+at commit `7087068e` with `--resume-any-commit` (analysis and docs commits
+only since the start), 1083 windows measured in the second session, all
+1344 present, completed 2026-09-16 03:14. Total measurement time about 8.7
+hours. 0 configurations excluded (exactness max 1e-6 to 1e-5 relative
+Frobenius), 0 contaminated windows, 0 implausible power samples in 537,600.
+Repetition CV of energy per call: median 0.76 percent, p90 4.7 percent,
+maximum 15.8 percent. Dense energy at fixed (d, B) varies by at most 2
+percent across the eight weight sets of different rank: data dependence of
+GEMM energy is negligible here.
 
-(filled in after completion)
+**Deviation: the command census produced no device events.** Every
+configuration's `commands_per_call` is 0.0. `torch.profiler` with the CUDA
+activity recorded no kernel events on this Windows machine (attribution
+pending; `scripts/diag_profiler.py` added), and the census wrote 0 instead
+of unknown. The analysis as first executed on 2026-09-16 therefore fitted
+every model with a dispatch feature identically zero (E1 fail at 23.4
+percent median APE, dispatch coefficient zero by construction). The
+corrected analysis, executed 2026-09-18 from the unchanged run files,
+treats a non-positive census as unknown and uses the declared count of one
+command per GEMM (1 dense, 2 factorized), which is the D-010 item 4
+fallback and remains to be validated against Nsight Systems on a subset.
+Both executions are reported; the corrected one is primary and is labeled
+"command counts declared, not measured" everywhere it is used.
 
-### Interpretation
+**Criteria (v2, the run's frozen config), corrected analysis.**
 
-(filled in after completion)
+| ID | Result | Value |
+|----|--------|-------|
+| E1 | PASS | selected model M1 (leave-one-cell-out CV 0.331 versus M2 0.338); held-out median APE 0.124, p90 0.261; P0 0.596 |
+| E2 | FAIL | interval overlap 3 of 14 (measurement intervals about 2 percent wide, prediction intervals under 1 percent); point rule (factor 1.5) 13 of 14, the miss d = 1024, B = 4 (measured 374, predicted 220) |
+| E3 | FAIL | d = 1024: measured r*(B=1) = 202 (0.198 d), predicted 206, pass; d = 4096: measured 2034 (0.497 d), fail on the measurement |
+| E4 | FAIL | Spearman 0.79 at d = 1024 (threshold 0.8), -0.04 at d = 4096 (flat between 0.41 and 0.54 d) |
+| E5 | PASS | 0 excluded |
+| E6 | PASS (reported) | summed regret over the held-out grid 0.06 percent (model) versus 0.09 percent (FLOPs), dominated by the joule-scale cells; per-cell mean 0.7 versus 1.2 percent; wrong choices 3 versus 7 of 112; worst cell 62 percent (model, d = 1024, B = 4) versus 51 percent (FLOPs) |
+| E7 | PASS | 0 contaminated, 0 implausible |
+| E8 (exploratory) | 11 of 14 | M3 point rule |
+| E9 (exploratory) | FAIL | M3 held-out median APE 0.240 against M1's 0.124 |
+| E10 (exploratory) | PASS | measured r*(B=1)/d 0.198 at 1024 (M3 0.174), 0.497 at 4096 (M3 0.500) |
+
+**H2a on rtx4090-laptop: NOT SUPPORTED as stated** (E2, E3, E4 fail).
+
+Fitted coefficients, M1 on d in {512, 2048}: 0.637 mJ per command, 15.3 pJ
+per MAC, 1.03 nJ per HBM word (95 percent bootstrap intervals within 1
+percent). M3, joint fit on energy and per-call time: 16.6 microseconds per
+command, 443 GB/s, 17.4 TFLOPS effective, floor power 46 W, memory-bound
+power 175 W, compute-bound 184 W (cap-bounded), transition size 1358;
+calibration median APE 0.209 (energy), 0.139 (time).
+
+Measured crossover fraction r*/d (rows d, columns B = 1, 4, 16, 64, 256, 1024, 4096):
+512: 0.021, dense always, 0.169, 0.157, 0.219, 0.368, 0.503;
+1024: 0.198, 0.366, 0.262, 0.327, 0.336, 0.443, 0.473;
+2048: 0.461, 0.459, 0.365, 0.327, 0.444, 0.405, 0.463;
+4096: 0.497, 0.421, 0.466, 0.538, 0.415, 0.467, 0.491.
+FLOPs predicts 0.5 everywhere: wrong by a factor of 24 at (512, 1), 2.5 at
+(1024, 1), 1.1 at (2048, 1), 1.0 at (4096, 1).
+
+### Observations (rtx4090-laptop)
+
+1. Three regimes are visible in the per-call times and powers. Dispatch
+   bound (d = 512, B = 1): dense 14.0 microseconds per call at 64 W;
+   factorized with two launches 25.4 microseconds at 33 W and 1455 MHz. Twice
+   the launches, 1.8 times the time, half the power, equal energy (0.89
+   against 0.84 mJ): the GPU downclocks while it waits, so a launch's
+   energy is not a constant. Memory bound (d = 4096, B = 1): dense reads 64
+   MB in 123 microseconds, 520 GB/s on a 576 GB/s part, at 149 W, uncapped.
+   Compute bound (B = 4096): everything at the 175 W cap, time proportional
+   to MACs at 23.6 TFLOPS, factorized at f = 1/2 about 2 percent slower.
+2. The B = 1 crossover fraction rises with d (0.021, 0.198, 0.461, 0.497)
+   because the dense GEMV moves from dispatch bound to memory bound; a
+   GEMV's bytes scale like its MACs, so at large d the FLOPs rule becomes
+   right. At fixed d the fraction rises with B where dispatch matters (512,
+   1024) and is flat near d/2 for d at or above 2048. H2a stated the
+   dependence on B alone; the dependence on d is the larger effect.
+3. The additive TOML model with command counts captures the bulk: 12.4
+   percent median error on held-out shapes, crossovers at B = 1 within 3
+   percent, 13 of 14 cells within a factor of 1.5. Its largest errors are
+   the small-rank factorized cells at B = 1 (about 50 percent over), where
+   the downclocked two-launch floor costs no more energy than one launch;
+   an additive per-command energy cannot represent that.
+4. The max-of-times model captures the regimes and the transition size but
+   predicts energy worse than the linear model, because one throughput
+   constant cannot represent cuBLAS's shape-dependent kernels (2 to 24
+   TFLOPS across the grid) and its floor power is fixed while the real one
+   moves with DVFS.
+5. E2 as an interval-overlap test is a test of exact agreement given
+   measurement intervals of about 2 percent; a model with 12 percent error
+   cannot pass it while still making every decision correctly. The
+   decision-relevant statement is the point rule and the regret.
+6. The registered regret metric sums energy over the held-out grid and is
+   dominated by the joule-scale cells; it says nothing about the small
+   cells where FLOPs is wrong by 24x. A per-cell relative regret is added
+   (D-012) as a reported metric.
+
+### Interpretation (rtx4090-laptop)
+
+H2a is refuted in the form registered: the B = 1 gap below d/4 holds for d
+at or below 1024 and not for memory-bound sizes, and monotonicity in B
+holds only where dispatch matters. The measurement stack, the exact-pair
+design, and the calibrate-then-predict protocol all worked; the hypothesis
+was mis-specified by leaving d out, and the census failed silently. The
+additive TOML form, given command counts, is a usable predictor of the
+crossover on this platform. The mechanism (a dispatch floor at reduced
+power, a memory-bound regime, a compute-bound regime at the cap, with the
+B = 1 transition size set by launch time and bandwidth) is the content to
+carry forward, restated as H2a' with d in it and tested prospectively on
+the A100 (addendum below and D-012). The nsys cross-check on the laptop is
+now required to validate the declared command counts.
+
+### Addendum 2026-09-18: A100 predictions filed before the A100 run (H3c), and criteria v3
+
+Filed at the commit containing this addendum (tag `exp-002-a100-predictions`),
+before any EXP-002 measurement on a100-sxm4-40gb. Basis: the laptop
+mechanism above, the A100's published bandwidth (1555 GB/s HBM2e) and FP32
+throughput (19.5 TFLOPS), and the expectation of a similar or larger
+CPU-side launch floor on a Linux node (5 to 20 microseconds). Each item is
+falsifiable by the A100 run alone.
+
+- A1 (structure in d). r*(B=1)/d rises with d: at most 0.30 at d = 1024
+  and at least 0.45 at d = 4096 (E10 form).
+- A2 (transition size larger than the laptop's). d_t = sqrt(t_launch x BW /
+  4 bytes) with the A100's bandwidth is between 1400 and 2800 for a floor
+  of 5 to 20 microseconds, against 1358 fitted on the laptop. Prediction:
+  at d = 2048, B = 1, the A100's crossover fraction is below 0.40 (the
+  laptop's is 0.461); at d = 4096, B = 1, it is at least 0.45.
+- A3 (large batch). At B = 4096 every shape's r*/d is between 0.42 and
+  0.50 (factorized at f = 1/2 costs 0 to 15 percent more than dense).
+- A4 (FLOPs errors). At (512, 1) FLOPs is wrong by at least a factor of
+  10 (or dense wins throughout); at (1024, 1) by at least 2; at (4096, 1)
+  by at most 1.2.
+- A5 (coefficients). M1 on the A100 calibration shapes: 0.5 to 2.0 mJ per
+  command (laptop 0.64), 5 to 10 pJ per MAC (laptop 15.3), 0.3 to 1.0 nJ
+  per HBM word (laptop 1.03).
+- A6 (predictor). M1 with measured command counts: held-out median APE at
+  most 20 percent and at least 12 of 14 held-out cells within a factor of
+  1.5 (E1 and E2 under v3).
+- A7 (counter). The A100's NVML energy counter passes C1 to C3 in EXP-001
+  and becomes that platform's energy source; if not, the power integral is
+  used and A1 to A6 stand unchanged.
+
+Criteria v3 for the A100 run (`configs/exp_002_lowrank_crossover.yaml`,
+`criteria.version: 3`, D-012): E2 gates on the point rule (factor 1.5),
+interval overlap reported; E3 and E4 apply to d = 1024 (E4 threshold 0.7,
+set from the laptop's 0.79), with d = 4096 reported under E10 instead; E8
+and E10 gate (M3 point rule at least 12 of 14; the d-structure); E6 and E9
+reported. Gate: E1, E2, E3, E4, E5, E7, E8, E10. The A100 run's census is
+expected to work (Linux CUPTI); if it also returns no device events, the
+run is analyzed with declared counts and labeled as here.
 
 ### Artifacts
 
