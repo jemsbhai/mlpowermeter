@@ -1,0 +1,182 @@
+{
+  "cpu": {
+    "logical_cores": 96,
+    "model": "AMD EPYC 7402 24-Core Processor"
+  },
+  "environment_variables": {
+    "CUBLAS_WORKSPACE_CONFIG": null,
+    "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+    "MKL_NUM_THREADS": null,
+    "NVIDIA_VISIBLE_DEVICES": null,
+    "OMP_NUM_THREADS": null,
+    "SLURM_CPUS_PER_TASK": "8",
+    "SLURM_GPUS_ON_NODE": "4",
+    "SLURM_JOB_GPUS": "0,1,2,3",
+    "SLURM_JOB_ID": "78865",
+    "SLURM_JOB_NAME": "exp001-g0",
+    "SLURM_JOB_NODELIST": "gpu01",
+    "SLURM_JOB_PARTITION": "gpu1",
+    "SLURM_MEM_PER_NODE": null,
+    "SLURM_NTASKS": "1",
+    "SLURM_STEP_GPUS": null,
+    "TOMLML_NVML_UUID": null,
+    "TOMLML_PLATFORM_TAG": null,
+    "TORCH_CUDNN_V8_API_LRU_CACHE_LIMIT": null
+  },
+  "git": {
+    "branch": "main",
+    "commit": "7087068e39c02353ed8e2585f1cb2155129c5d34",
+    "dirty": false,
+    "error": null,
+    "root": "/home1/aalsulami2019/mlpowermeter"
+  },
+  "hostname": "gpu01",
+  "nvml": {
+    "available": true,
+    "cuda_driver_version": 13000,
+    "cuda_driver_version_error": null,
+    "cuda_driver_version_str": "13.0",
+    "devices": [
+      {
+        "error": null,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "nvml_index": 0,
+        "pci_bus_id": "00000000:01:00.0",
+        "uuid": "gpu-392b3a47-dfee-b173-f18a-02813bee998e"
+      },
+      {
+        "error": null,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "nvml_index": 1,
+        "pci_bus_id": "00000000:41:00.0",
+        "uuid": "gpu-3b6d4b25-4527-a4ed-4652-ddcb221ceed9"
+      },
+      {
+        "error": null,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "nvml_index": 2,
+        "pci_bus_id": "00000000:81:00.0",
+        "uuid": "gpu-8c348c1f-e2f8-7a79-0d52-2df7c92ff6d4"
+      },
+      {
+        "error": null,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "nvml_index": 3,
+        "pci_bus_id": "00000000:c1:00.0",
+        "uuid": "gpu-11047cdb-4467-8c5f-736d-365245119330"
+      }
+    ],
+    "driver_version": "580.173.02",
+    "driver_version_error": null,
+    "nvml_version": "13.580.173.02",
+    "nvml_version_error": null,
+    "target_device_state": {
+      "resolved": {
+        "method": "torch_uuid",
+        "name": "NVIDIA A100-SXM4-40GB",
+        "notes": [],
+        "nvml_index": 0,
+        "pci_bus_id": "00000000:01:00.0",
+        "torch_index": 0,
+        "torch_name": "NVIDIA A100-SXM4-40GB",
+        "torch_uuid": "gpu-392b3a47-dfee-b173-f18a-02813bee998e",
+        "uuid": "gpu-392b3a47-dfee-b173-f18a-02813bee998e",
+        "uuid_verified": true
+      },
+      "state": {
+        "energy_mj": 736720939448,
+        "mem_clock_mhz": 1215,
+        "power_w": 61.714,
+        "sm_clock_mhz": 210,
+        "temperature_c": 32,
+        "throttle_mask": 1,
+        "throttle_reasons": [
+          "GpuIdle"
+        ]
+      }
+    }
+  },
+  "os": {
+    "machine": "x86_64",
+    "platform": "Linux-6.8.0-136-generic-x86_64-with-glibc2.39",
+    "release": "6.8.0-136-generic",
+    "system": "Linux",
+    "version": "#136-Ubuntu SMP PREEMPT_DYNAMIC Wed Jul  1 21:53:05 UTC 2026"
+  },
+  "packages": {
+    "cuml": null,
+    "cupy": null,
+    "gymnasium": null,
+    "lightgbm": null,
+    "matplotlib": "3.11.2",
+    "numpy": "2.0.2",
+    "nvidia-ml-py": "13.595.45",
+    "pandas": null,
+    "pynvml": null,
+    "pyyaml": "6.0.2",
+    "scikit-learn": "1.5.2",
+    "scipy": "1.17.1",
+    "stable-baselines3": null,
+    "tomlml": "0.1.0",
+    "torch": "2.6.0+cu124",
+    "torchaudio": null,
+    "torchvision": null,
+    "triton": "3.2.0",
+    "xgboost": null
+  },
+  "python": {
+    "executable": "/home1/aalsulami2019/venvs/tomlml-gpu/bin/python",
+    "implementation": "CPython",
+    "version": "3.12.3"
+  },
+  "ram_gb": 503.72,
+  "timestamp_local": "2026-09-25T06:42:03-04:00",
+  "timestamp_utc": "2026-09-25T10:42:03+00:00",
+  "torch": {
+    "cuda_available": true,
+    "cuda_version": "12.4",
+    "cudnn_allow_tf32": true,
+    "cudnn_benchmark": false,
+    "cudnn_version": 90100,
+    "deterministic_algorithms": false,
+    "device_count": 4,
+    "devices": [
+      {
+        "compute_capability": "8.0",
+        "index": 0,
+        "multi_processor_count": 108,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "total_memory_bytes": 42404806656,
+        "uuid": "392b3a47-dfee-b173-f18a-02813bee998e"
+      },
+      {
+        "compute_capability": "8.0",
+        "index": 1,
+        "multi_processor_count": 108,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "total_memory_bytes": 42404806656,
+        "uuid": "3b6d4b25-4527-a4ed-4652-ddcb221ceed9"
+      },
+      {
+        "compute_capability": "8.0",
+        "index": 2,
+        "multi_processor_count": 108,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "total_memory_bytes": 42404806656,
+        "uuid": "8c348c1f-e2f8-7a79-0d52-2df7c92ff6d4"
+      },
+      {
+        "compute_capability": "8.0",
+        "index": 3,
+        "multi_processor_count": 108,
+        "name": "NVIDIA A100-SXM4-40GB",
+        "total_memory_bytes": 42404806656,
+        "uuid": "11047cdb-4467-8c5f-736d-365245119330"
+      }
+    ],
+    "float32_matmul_precision": "highest",
+    "installed": true,
+    "matmul_allow_tf32": false,
+    "version": "2.6.0+cu124"
+  }
+}
