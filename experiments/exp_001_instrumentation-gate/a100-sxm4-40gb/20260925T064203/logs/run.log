@@ -1,0 +1,59 @@
+2026-09-25 06:42:03,741 INFO EXP-001 instrumentation-gate on a100-sxm4-40gb (run 20260925T064203) -> /home1/aalsulami2019/mlpowermeter/experiments/exp_001_instrumentation-gate/a100-sxm4-40gb/20260925T064203
+2026-09-25 06:42:03,741 INFO config sources: base.yaml, exp_001_instrumentation.yaml
+2026-09-25 06:42:03,741 INFO energy source setting: auto
+2026-09-25 06:42:03,742 INFO device: nvml index 0, NVIDIA A100-SXM4-40GB, uuid gpu-392b3a47-dfee-b173-f18a-02813bee998e, resolved by torch_uuid, uuid_verified=True
+2026-09-25 06:42:03,994 INFO S0 capabilities: probing NVML
+2026-09-25 06:42:04,024 INFO   counter supported=True driver=580.173.02 enforced_limit=400.0 W
+2026-09-25 06:42:04,024 INFO S1 resolution: polling sensor at idle for 10.0 s
+2026-09-25 06:42:14,900 INFO S1 resolution: polling sensor under load for 10.0 s
+2026-09-25 06:42:33,304 INFO   counter update period under load: median 101.15098766982555 ms (idle 100.96242465078831 ms); poll rate 304 Hz
+2026-09-25 06:42:33,305 INFO S2 idle_pre: waiting for thermal settle (timeout 300 s)
+2026-09-25 06:42:42,308 INFO   settled at 40 C after 9.0 s (timed_out=False); idle baseline 60.0 s
+2026-09-25 06:43:42,347 INFO   idle power 79.08 W (std 0.60), drift -2.192 W/min
+2026-09-25 06:43:42,347 INFO S3 thermal: heat load for 60.0 s
+2026-09-25 06:44:49,752 INFO   heat: 379.5 W mean, max 66 C, sm clock 1409 MHz, throttle []; settling
+2026-09-25 06:46:03,794 INFO   settled after 14.0 s (timed_out=False); post-heat idle 79.96 W (bias +0.88 W)
+2026-09-25 06:46:03,795 INFO S4 repeatability [matmul_large]: warmup 30.0 s, then 10 blocks of 10.0 s
+2026-09-25 06:46:42,102 INFO   calibrated 7.217 ms per call -> 1386 calls per block
+2026-09-25 06:46:52,115 INFO   block 00: 10.003 s, 388.1 W, 2.827 J/call (counter) 2.801 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:47:02,127 INFO   block 01: 10.003 s, 391.2 W, 2.816 J/call (counter) 2.823 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:47:12,142 INFO   block 02: 10.003 s, 393.1 W, 2.83 J/call (counter) 2.837 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:47:22,152 INFO   block 03: 10.003 s, 394.4 W, 2.841 J/call (counter) 2.846 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:47:32,163 INFO   block 04: 10.003 s, 394.9 W, 2.879 J/call (counter) 2.85 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:47:42,175 INFO   block 05: 10.003 s, 396.3 W, 2.857 J/call (counter) 2.86 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:47:52,185 INFO   block 06: 10.003 s, 397.6 W, 2.864 J/call (counter) 2.87 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:48:02,195 INFO   block 07: 10.003 s, 398.7 W, 2.87 J/call (counter) 2.877 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:48:12,206 INFO   block 08: 10.003 s, 398.6 W, 2.875 J/call (counter) 2.877 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:48:22,221 INFO   block 09: 10.007 s, 398.6 W, 2.874 J/call (counter) 2.878 J/call (integral), monotonic=True, throttle=['SwPowerCap']
+2026-09-25 06:48:22,234 INFO   repeatability [matmul_large]: counter 2.853 J/call CV 0.0080; integral 2.852 J/call CV 0.0091; counter vs integral max |rel| 0.01008944900022918
+2026-09-25 06:48:22,236 INFO S5 window_sufficiency [matmul_large]: lengths [0.5, 1.0, 2.0, 5.0, 10.0, 20.0] x 5 reps, randomized order
+2026-09-25 06:56:18,066 INFO   window sufficiency [matmul_large]: CV by length, counter {'0.5': 0.008, '1': 0.0018, '2': 0.0013, '5': 0.0006, '10': 0.0054, '20': 0.001} / integral {'0.5': 0.0072, '1': 0.0062, '2': 0.0014, '5': 0.0027, '10': 0.0008, '20': 0.0017}; smallest sufficient window counter 0.5 s, integral 0.5 s
+2026-09-25 06:56:18,068 INFO S4 repeatability [matmul_tiny_loop]: warmup 30.0 s, then 10 blocks of 10.0 s
+2026-09-25 06:56:49,570 INFO   calibrated 0.010 ms per call -> 1005647 calls per block
+2026-09-25 06:56:59,601 INFO   block 00: 10.023 s, 118.8 W, 0.001178 J/call (counter) 0.001184 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:57:09,682 INFO   block 01: 10.075 s, 117.5 W, 0.001178 J/call (counter) 0.001178 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:57:19,744 INFO   block 02: 10.055 s, 116.7 W, 0.001169 J/call (counter) 0.001167 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:57:29,792 INFO   block 03: 10.041 s, 116.0 W, 0.001163 J/call (counter) 0.001159 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:57:39,903 INFO   block 04: 10.104 s, 115.5 W, 0.001158 J/call (counter) 0.001161 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:57:49,986 INFO   block 05: 10.076 s, 115.1 W, 0.001154 J/call (counter) 0.001154 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:58:00,029 INFO   block 06: 10.035 s, 114.9 W, 0.001151 J/call (counter) 0.001146 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:58:10,080 INFO   block 07: 10.043 s, 114.8 W, 0.00114 J/call (counter) 0.001147 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:58:20,145 INFO   block 08: 10.059 s, 114.9 W, 0.001152 J/call (counter) 0.001149 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:58:30,208 INFO   block 09: 10.056 s, 114.7 W, 0.00115 J/call (counter) 0.001147 J/call (integral), monotonic=True, throttle=[]
+2026-09-25 06:58:30,221 INFO   repeatability [matmul_tiny_loop]: counter 0.001159 J/call CV 0.0110; integral 0.001159 J/call CV 0.0115; counter vs integral max |rel| 0.00630793037870148
+2026-09-25 06:58:30,221 INFO S5 window_sufficiency [matmul_tiny_loop]: lengths [0.5, 1.0, 2.0, 5.0, 10.0, 20.0] x 5 reps, randomized order
+2026-09-25 07:02:48,296 INFO   window sufficiency [matmul_tiny_loop]: CV by length, counter {'0.5': 0.0029, '1': 0.0437, '2': 0.0527, '5': 0.0316, '10': 0.0327, '20': 0.0318} / integral {'0.5': 0.0041, '1': 0.0361, '2': 0.0292, '5': 0.0281, '10': 0.0344, '20': 0.0328}; smallest sufficient window counter None s, integral None s
+2026-09-25 07:02:48,309 INFO energy source for this platform: counter
+2026-09-25 07:02:48,309 INFO   PASS C1_counter_supported_and_monotonic (value={'supported': True, 'monotonic': True} threshold={'supported': True, 'monotonic': True}) [not gating]
+2026-09-25 07:02:48,309 INFO   PASS C2_counter_update_period_ms (value=101.15098766982555 threshold=200) [not gating]
+2026-09-25 07:02:48,309 INFO   PASS C3_counter_vs_power_integral_rel (value=0.01008944900022918 threshold=0.05) [not gating]
+2026-09-25 07:02:48,309 INFO   PASS C4_repeatability_cv_matmul_large (value=0.008040869178568215 threshold=0.03)
+2026-09-25 07:02:48,309 INFO   PASS C4_repeatability_cv_matmul_tiny_loop (value=0.011039403163181192 threshold=0.05)
+2026-09-25 07:02:48,309 INFO   PASS C5_thermal_settle_before_timeout (value=14.003138655796647 threshold=300.0)
+2026-09-25 07:02:48,309 INFO   PASS C6_no_foreign_compute_processes (value=0 threshold=0)
+2026-09-25 07:02:48,309 INFO   PASS C7_min_sufficient_window_s_matmul_large (value=0.5 threshold=10)
+2026-09-25 07:02:48,309 INFO   PASS C8_no_forbidden_throttle_reasons (value=[] threshold=['HwPowerBrakeSlowdown', 'HwSlowdown', 'HwThermalSlowdown', 'SwThermalSlowdown'])
+2026-09-25 07:02:48,309 INFO   PASS C9_device_uuid_verified (value=True threshold=True)
+2026-09-25 07:02:48,309 INFO   PASS C10_implausible_power_sample_fraction (value=0.0 threshold=0.01)
+2026-09-25 07:02:48,309 INFO GATE PASS (valid) in 1244 s
+2026-09-25 07:02:48,314 INFO status completed; manifest /home1/aalsulami2019/mlpowermeter/experiments/exp_001_instrumentation-gate/a100-sxm4-40gb/20260925T064203/manifest.json

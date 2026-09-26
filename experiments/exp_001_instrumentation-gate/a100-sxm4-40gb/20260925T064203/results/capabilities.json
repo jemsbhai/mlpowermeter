@@ -1,0 +1,129 @@
+{
+  "applications_clock_mem_mhz": {
+    "error": null,
+    "value": 1215
+  },
+  "applications_clock_sm_mhz": {
+    "error": null,
+    "value": 1095
+  },
+  "compute_mode": {
+    "error": null,
+    "value": 0
+  },
+  "device": {
+    "method": "torch_uuid",
+    "name": "NVIDIA A100-SXM4-40GB",
+    "notes": [],
+    "nvml_index": 0,
+    "pci_bus_id": "00000000:01:00.0",
+    "torch_index": 0,
+    "torch_name": "NVIDIA A100-SXM4-40GB",
+    "torch_uuid": "gpu-392b3a47-dfee-b173-f18a-02813bee998e",
+    "uuid": "gpu-392b3a47-dfee-b173-f18a-02813bee998e",
+    "uuid_verified": true
+  },
+  "energy_counter_mj": {
+    "error": null,
+    "value": 736720951949
+  },
+  "environment": {
+    "COMPUTERNAME": null,
+    "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+    "HOSTNAME": "gpu01",
+    "NVIDIA_VISIBLE_DEVICES": null,
+    "SLURM_CPUS_PER_TASK": "8",
+    "SLURM_GPUS_ON_NODE": "4",
+    "SLURM_JOB_GPUS": "0,1,2,3",
+    "SLURM_JOB_ID": "78865",
+    "SLURM_JOB_NAME": "exp001-g0",
+    "SLURM_JOB_NODELIST": "gpu01",
+    "SLURM_JOB_PARTITION": "gpu1",
+    "SLURM_STEP_GPUS": null,
+    "TOMLML_NVML_UUID": null
+  },
+  "mem_clock_max_mhz": {
+    "error": null,
+    "value": 1215
+  },
+  "mem_clock_mhz": {
+    "error": null,
+    "value": 1215
+  },
+  "memory_total_bytes": {
+    "error": null,
+    "value": 42949672960
+  },
+  "persistence_mode": {
+    "error": null,
+    "value": 0
+  },
+  "power_limit_constraints_w": {
+    "error": null,
+    "value": [
+      100.0,
+      400.0
+    ]
+  },
+  "power_limit_default_w": {
+    "error": null,
+    "value": 400.0
+  },
+  "power_limit_enforced_w": {
+    "error": null,
+    "value": 400.0
+  },
+  "power_limit_management_w": {
+    "error": null,
+    "value": 400.0
+  },
+  "power_samples_api": {
+    "n_samples": 119,
+    "native_period_ms_max": 23.553,
+    "native_period_ms_median": 20.193,
+    "native_period_ms_min": 16.034,
+    "span_s": 2.391004,
+    "supported": true
+  },
+  "power_w": {
+    "error": null,
+    "value": 61.778
+  },
+  "running_processes": [],
+  "sm_clock_max_mhz": {
+    "error": null,
+    "value": 1410
+  },
+  "sm_clock_mhz": {
+    "error": null,
+    "value": 210
+  },
+  "system": {
+    "cuda_driver_version": 13000,
+    "cuda_driver_version_error": null,
+    "cuda_driver_version_str": "13.0",
+    "driver_version": "580.173.02",
+    "driver_version_error": null,
+    "nvml_version": "13.580.173.02",
+    "nvml_version_error": null
+  },
+  "temperature_c": {
+    "error": null,
+    "value": 32
+  },
+  "throttle": {
+    "api": "nvmlDeviceGetCurrentClocksEventReasons",
+    "error": null,
+    "mask": 1,
+    "reasons": [
+      "GpuIdle"
+    ]
+  },
+  "utilization": {
+    "error": null,
+    "value": {
+      "gpu": 0,
+      "memory": 0
+    }
+  }
+}
