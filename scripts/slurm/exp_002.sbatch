@@ -9,7 +9,7 @@
 #     sbatch scripts/slurm/exp_002.sbatch             # about 9 hours
 
 #SBATCH --job-name=exp002-lowrank
-#SBATCH --partition=<PARTITION>
+#SBATCH --partition=gpu1
 ##SBATCH --account=<ACCOUNT>
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -21,7 +21,7 @@
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
-source ~/venvs/tomlml/bin/activate
+source ~/venvs/tomlml-gpu/bin/activate
 
 echo "== host $(hostname) job ${SLURM_JOB_ID:-none} at $(date -Is)"
 echo "== CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset}"
