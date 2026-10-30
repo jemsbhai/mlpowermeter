@@ -1,0 +1,116 @@
+seed: 42
+deterministic: false
+torch_device: 0
+sample_interval_s: 0.05
+probe_control_permissions: false
+allow_dirty: false
+experiment_id: EXP-002
+name: lowrank-crossover
+experiment: exp_002_lowrank_crossover
+phase: pilot
+grid:
+  shapes:
+  - 512
+  - 1024
+  - 2048
+  - 4096
+  rank_fractions:
+  - 0.015625
+  - 0.03125
+  - 0.0625
+  - 0.125
+  - 0.25
+  - 0.375
+  - 0.5
+  - 0.75
+  batches:
+  - 1
+  - 4
+  - 16
+  - 64
+  - 256
+  - 1024
+  - 4096
+  realizations:
+  - dense
+  - factorized
+  reps: 3
+  calibration_shapes:
+  - 512
+  - 2048
+  heldout_shapes:
+  - 1024
+  - 4096
+quick_grid:
+  shapes:
+  - 512
+  - 1024
+  rank_fractions:
+  - 0.0625
+  - 0.25
+  - 0.5
+  batches:
+  - 1
+  - 64
+  - 4096
+  realizations:
+  - dense
+  - factorized
+  reps: 2
+  calibration_shapes:
+  - 512
+  heldout_shapes:
+  - 1024
+workload:
+  dtype: float32
+  allow_tf32: false
+  data_seed: 1234
+  weight_cycling_l2_multiple: 2
+  exactness_tolerance_rel_frobenius: 0.0001
+measurement:
+  window_s: 20
+  warmup_s: 2
+  settle_load:
+    rank_fraction: 0.25
+    batch: 256
+    realization: dense
+  thermal_settle_threshold_c: 1.0
+  thermal_settle_window_s: 5.0
+  thermal_settle_timeout_s: 300
+  census_warmup_calls: 5
+analysis:
+  models:
+  - P0
+  - M1
+  - M2
+  selection: leave_one_cell_out
+  bootstrap_resamples: 1000
+  bootstrap_seed_component: bootstrap
+criteria:
+  version: 3
+  heldout_median_ape_max: 0.2
+  crossover_coverage_rule: point
+  crossover_coverage_min_cells: 12
+  crossover_point_factor_max: 1.5
+  b1_rank_fraction_max: 0.25
+  b1_gap_shapes:
+  - 1024
+  monotonicity_spearman_min: 0.7
+  monotonicity_shapes:
+  - 1024
+  exactness_max_excluded_fraction: 0.05
+  regret_max: 0.05
+  contaminated_windows_max: 0
+  implausible_power_fraction_max: 0.01
+  m3:
+    crossover_point_hits_min: 12
+    point_factor: 1.5
+    b1_small_d_fraction_max: 0.3
+    b1_large_d_fraction_min: 0.45
+_sources:
+- path: /home1/aalsulami2019/mlpowermeter/configs/base.yaml
+  sha256: 0ef0e65b098381650787031f05795036fbdbd875ad3d8cfe033bdb4315a693c3
+- path: /home1/aalsulami2019/mlpowermeter/configs/exp_002_lowrank_crossover.yaml
+  sha256: f2d7579e468f8557b6f0bc8f745f181ce8b047fc460f1c1b754f8d952273b4ad
+quick: false
+quick_factor: 1.0

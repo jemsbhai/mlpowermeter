@@ -1,0 +1,13 @@
+{
+  "cublas_workspace_config": null,
+  "cudnn_benchmark": false,
+  "deterministic_algorithms": false,
+  "master_seed": 42,
+  "notes": [
+    "deterministic algorithms not forced: measured workloads run their default kernels (D-008)"
+  ],
+  "numpy": 42,
+  "python_random": 42,
+  "torch": 42,
+  "torch_cuda": 42
+}
