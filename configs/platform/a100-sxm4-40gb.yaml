@@ -1,0 +1,33 @@
+# Platform overrides for a100-sxm4-40gb (NVIDIA A100-SXM4-40GB, Linux 6.8 SLURM node
+# gpu01, driver 580.173.02, torch 2.6.0+cu124).
+#
+# Established by EXP-001 run 20260925T064203 (commit 7087068, gate G0 PASS under
+# protocol v2, LOGBOOK.md addendum of 2026-09-26). The runner merges this file
+# after configs/base.yaml and before the experiment config.
+
+platform_tag: a100-sxm4-40gb
+
+# DECISIONS.md D-009: the NVML cumulative energy counter qualified on this
+# platform (C1 to C3: monotonic, 101 ms update period, 1.0 percent agreement
+# with the integrated power over 10 s blocks). Energy is the counter delta; the
+# power integral is still recorded in every window as the consistency check.
+energy_source: counter
+sample_interval_s: 0.05
+
+measurement:
+  # Measured in EXP-001 S1 (10 s of tight polling at 304 to 346 Hz).
+  counter_update_period_ms: 101
+  power_update_period_ms: 103
+  native_power_sample_period_ms: 20     # nvmlDeviceGetSamples buffer, supported here
+  # Measured in EXP-001 S5.
+  min_window_s_power_capped: 0.5        # compute-bound GEMM at the 400 W cap
+  min_window_s_uncapped: null           # dispatch-bound loop: no length under 2 percent CV while cooling; D-010 settle rule applies
+  default_window_s: 20                  # protocol default (D-010 item 1)
+  warmup_until_thermal_settle: true
+  thermal_settle_threshold_c: 1.0
+  thermal_settle_window_s: 5.0
+  thermal_settle_timeout_s: 300
+  # Reference values for sanity checks, not inputs to any model.
+  idle_power_w: 79
+  power_limit_enforced_w: 400
+  persistence_mode: 0

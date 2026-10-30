@@ -72,7 +72,7 @@ Structured metadata plus narrative reasoning. Follows the lab-runner protocol.
 
 | ID | Title | Platform | Phase | Status |
 |----|-------|----------|-------|--------|
-| EXP-001 | Instrumentation validation (gate G0) | rtx4090-laptop, a100-sxm4-40gb | pilot | rtx4090-laptop PASS (power integral); a100 pending |
+| EXP-001 | Instrumentation validation (gate G0) | rtx4090-laptop, a100-sxm4-40gb | pilot | PASS on both: rtx4090-laptop (power integral), a100-sxm4-40gb (counter) |
 | EXP-002 | Exact low-rank crossover, dense versus factorized GEMM (inference) | rtx4090-laptop, a100-sxm4-40gb | pilot | rtx4090-laptop complete, H2a NOT supported as stated (mechanism found, H2a' registered); a100 pending |
 
 ---
@@ -378,6 +378,77 @@ rtx4090-laptop, to be written into the next experiment's decision entry:
 
 The A100 is judged by its own full run. Nothing here transfers to it except
 the protocol.
+
+### Addendum 2026-09-26 (America/New_York): a100-sxm4-40gb full run, results
+
+**Run:** `20260925T064203` by Ameera, node gpu01 (SLURM job 78865, partition
+gpu1, whole node: four A100-SXM4-40GB allocated, 8 CPUs per task), 06:42 to
+07:02 cluster local time, 1244 s. Commit `7087068e` (protocol v2), clean
+tree. Stack matched to D-004: Python 3.12.3, torch 2.6.0+cu124, cuDNN 9.1,
+nvidia-ml-py 13.595.45; driver 580.173.02 (CUDA driver 13.0), Linux 6.8,
+AMD EPYC 7402, 504 GB. Delivered as pull request #1 (branch
+`exp-001-a100`), reviewed and merged 2026-09-26.
+
+**Status:** completed. **Gate G0 on a100-sxm4-40gb: PASS (valid).**
+Energy source for this platform: **counter** (C1, C2, C3 all pass).
+
+### Results (a100-sxm4-40gb)
+
+| Quantity | Value |
+|----------|-------|
+| Device resolution | torch UUID, verified; NVML index 0 of 4, PCI 00000000:01:00.0 |
+| Power limit | enforced 400.0 W, constraints 100 to 400 W; plausibility ceiling 800 W |
+| Counter update period | 100.96 ms idle (98.6 to 103.4), 101.15 ms under load (78.1 to 125.5); 99 updates in 10 s |
+| Power reading update period | about 103 to 108 ms median; native sample buffer 20.2 ms (samples API supported) |
+| NVML poll rate (2 reads per poll) | 346 Hz idle, 304 Hz under load |
+| Idle pre-heat (55 s) | 79.08 W, std 0.60, drift -2.19 W/min, 35.6 C, SM 1095 MHz; counter 4345.5 J against integral 4349.6 J |
+| Idle post-heat | 79.96 W, std 0.99, drift -3.60 W/min; hot-idle bias +0.88 W |
+| Thermal settle (1 C over 5 s) | 9 s at 40 C before; 14 s after the heat load |
+| Heat load (60 s) | 379.5 W mean, 66 C max, SM 1409 MHz, no throttle; 2.743 J/call (counter), 2.741 (integral) |
+| C1 / C2 / C3 | pass / pass (101 ms) / pass (max abs rel 0.0101) |
+| Repeatability matmul_large, 10 x 10 s, 1386 calls per block | counter 2.853 J/call, CV 0.80 percent (2.816 to 2.879, rising with temperature 64 to 69 C at a fixed 1410 MHz; power 393 to 399 W); integral 2.852, CV 0.91 percent; SwPowerCap in the last block only |
+| Repeatability matmul_tiny_loop, 10 x 10 s, 1,005,647 calls per block | counter 1.159 mJ/call, CV 1.10 percent (1.178 falling to 1.150 while cooling 45 to 38 C); 9.94 microseconds per call; 116 W; SM 1410 MHz |
+| Window sufficiency matmul_large (counter CV, 5 reps) | 0.5 s 0.80 percent, 1 s 0.18, 2 s 0.13, 5 s 0.06, 10 s 0.54, 20 s 0.10; smallest sufficient window 0.5 s |
+| Window sufficiency matmul_tiny_loop (counter CV, 5 reps) | 0.5 s 0.29 percent, 1 s 4.4, 2 s 5.3, 5 s 3.2, 10 s 3.3, 20 s 3.2; no sufficient window (drift dominated, see observations) |
+| Isolation | 0 foreign processes; 0 of 83 windows contaminated |
+| C10 | 0 of 15,436 samples masked |
+| Gating criteria C4 to C10 | all pass (C4 0.80 and 1.10 percent; C5 14 s; C7 0.5 s; C8 none; C9 true) |
+
+### Observations (a100-sxm4-40gb)
+
+1. The counter is a valid energy source here: 1.0 percent agreement with
+   the integral on every 10 s block, 0.1 percent on the 55 s idle windows,
+   monotonic throughout. The same API that reports about 500 W-equivalent
+   at a 4 W idle on the laptop reports 79 W at idle here against a 79 W
+   power reading. Platform-specific validation of the counter is required;
+   the gate did its job on both.
+2. Temperature enters energy differently on the two platforms. Under the
+   laptop's cap, clocks fall at fixed power and time per call rises; on
+   the A100 the clock stays at 1410 MHz and power rises 393 to 399 W as
+   the die warms 64 to 69 C, so energy per call rises 1.6 percent over 100
+   s at fixed time per call. Both are leakage; one shows up as time, the
+   other as power.
+3. The dispatch floor is about 10 microseconds per call (Linux, EPYC)
+   against about 14 to 19 on the Windows laptop, at nearly twice the
+   power (116 W against 60 W), so the energy of one tiny call is almost
+   the same on both platforms (1.16 against 1.11 mJ). The A100's higher
+   floor power comes with a 79 W idle.
+4. The tiny-loop blocks and windows ran while the GPU cooled from the 395
+   W sequence (45 to 38 C), and their block-to-block trend (2.4 percent
+   over 100 s) is that cooling, as on the laptop; hence no window length
+   reached the 2 percent target in the sufficiency sweep except the 0.5 s
+   windows that happened to fall close together. D-010's settle-under-load
+   rule is the remedy and applies to every run after the gate.
+5. Persistence mode is off on the node (recorded). All four GPUs were
+   allocated to the job, which gives whole-node isolation.
+
+### Interpretation (a100-sxm4-40gb)
+
+The measurement stack is fit for purpose on the A100 with the counter as
+the energy source, recorded in `configs/platform/a100-sxm4-40gb.yaml`. The
+cross-platform facts feed the A100 predictions filed for EXP-002 on
+2026-09-18: a launch floor near 10 microseconds and the published 1555 GB/s
+put the transition size near 1970, inside the filed 1400 to 2800.
 
 ---
 
