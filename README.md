@@ -4,7 +4,7 @@ Physics-grounded energy measurement and prediction for machine learning
 workloads, from classical models through deep networks to reinforcement
 learning agents. This repository holds the `tomlml` package, the experiment
 protocol, the experimental record, and the paper source for the TOML
-(Transistor Operations for Machine Learning) study targeting ICLR.
+(Transistor Operations for Machine Learning) study; the paper source is in `paper/`.
 
 **Status:** instrumentation phase. No scientific results are claimed yet. The
 first experiment (EXP-001) validates the measurement stack on both target
