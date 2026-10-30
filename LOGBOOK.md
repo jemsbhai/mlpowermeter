@@ -966,3 +966,49 @@ included.
   committed with the run and reproduced independently)
 - `paper/figures/*_a100.pdf`, `paper/figures/*_both.pdf`,
   `paper/figures/heldout_scatter_row.pdf` from `scripts/paper_figures.py`
+
+## Addendum 2026-10-30: MLSys 2027 submission filed
+
+Submitted to MLSys 2027 on 2026-10-30, about 15:20 ET (deadline 16:00 ET,
+20:00 UTC), on OpenReview (venue MLSys.org/2027/Conference), double blind.
+
+- Title: "When FLOPs Point the Wrong Way: Pre-Registered Energy Crossovers
+  for Low-Rank Inference on GPUs".
+- Main paper: `paper/main.tex` built on Overleaf with `\def\NOAPPENDIX{1}`
+  (mlsys2025 style, review mode). 12 pages: body on pages 1 to 10,
+  references on 11, AI usage disclosure on 12. All fonts Type 1. Author
+  field "Anonymous Authors". The only self-reference is the third-person
+  citation of the FLAIRS TOML paper.
+- Supplementary material: `paper/supplementary.tex` (the appendix compiled
+  on its own), 2 pages, with the anonymized repository link
+  https://anonymous.4open.science/r/mlpowermeter-1FA5/ (mirror of this
+  repository at the submission state).
+- Data in the paper: laptop run `20260915T180708` and A100 run
+  `20261030T001246`, both analyses reproduced independently before
+  submission (see the addendum above). Hypotheses and predictions reported
+  as filed: H2a refuted on the laptop, H2a' not supported on the A100 under
+  criteria v3, predictions A1, A2, A7 held, A3 to A6 failed.
+
+Two upload rounds were needed, both before the deadline:
+
+1. The first main PDF had four unresolved cross-references printed as
+   "??" (three `\ref`s from the body to appendix labels, which do not
+   exist when the appendix is built separately, and one from the appendix
+   to the main gate table). Fixed by replacing them with plain text
+   ("Supplementary Figure 1", "Supplementary Figure 2", "in the
+   supplement", "Table 1 of the main paper") and shortening one clause so
+   the body still ends on page 10.
+2. The rebuilt main PDF came out at 14 pages because `\NOAPPENDIX` was
+   commented out in the copied `main.tex`, so the appendix was compiled
+   into the main file; the CFP requires the appendix as a separate upload.
+   Rebuilt with the define uncommented (12 pages) and re-uploaded.
+
+Lesson for the next submission: build the main paper and the supplement
+from one checklist that includes `grep '??'` on the PDF text, the page
+count, and the presence or absence of the appendix, and run it on the
+exact files to be uploaded, not on a local build.
+
+Files changed for the submission that remain to be committed at the time
+of writing: `paper/main.tex`, `paper/appendix.tex`, `paper/supplementary.tex`
+(mirror link), `paper/SUBMISSION_FORM.md`, `paper/figures/` (Type 1
+rebuilds), `README.md`, and this logbook.
