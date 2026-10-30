@@ -73,7 +73,7 @@ Structured metadata plus narrative reasoning. Follows the lab-runner protocol.
 | ID | Title | Platform | Phase | Status |
 |----|-------|----------|-------|--------|
 | EXP-001 | Instrumentation validation (gate G0) | rtx4090-laptop, a100-sxm4-40gb | pilot | PASS on both: rtx4090-laptop (power integral), a100-sxm4-40gb (counter) |
-| EXP-002 | Exact low-rank crossover, dense versus factorized GEMM (inference) | rtx4090-laptop, a100-sxm4-40gb | pilot | rtx4090-laptop complete, H2a NOT supported as stated (mechanism found, H2a' registered); a100 pending |
+| EXP-002 | Exact low-rank crossover, dense versus factorized GEMM (inference) | rtx4090-laptop, a100-sxm4-40gb | pilot | complete on both: rtx4090-laptop H2a NOT supported (v2); a100-sxm4-40gb H2a' NOT supported (v3), predictions A1, A2, A7 held, A3 to A6 failed |
 
 ---
 
@@ -809,3 +809,160 @@ run is analyzed with declared counts and labeled as here.
   (`results/windows.json`, `results/census.json`, `results/exactness.json`,
   `results/summary.json`, `results/analysis.json`, `samples/*.csv`,
   `figures/`, `logs/run.log`)
+
+### Addendum 2026-10-30 (America/New_York): a100-sxm4-40gb full run, results and the test of H2a' and A1 to A7
+
+**Run.** `20261030T001246` by Ameera, one A100-SXM4-40GB of a whole-node
+SLURM allocation (four GPUs allocated, 8 CPUs per task), 00:12 to 08:40
+cluster local time, 30464 s, started at commit `e1358fcbe2e9b7fca52e30dc63c6d30b2e170cb9`
+(main plus the partition edit to `scripts/slurm/exp_002.sbatch`), clean tree,
+config hashes in the manifest, criteria v3 frozen in `config.yaml`
+(`criteria.version: 3`, D-012). Delivered as pull request #2 (branch
+`exp-002-a100`), merged 2026-10-30 (`97857d5`). Energy source setting `auto`
+(the overlay `configs/platform/a100-sxm4-40gb.yaml` was not in her clone;
+`auto` resolves to the counter when it is available, so the data are the
+counter's, as D-009 prescribes for this platform; the counter stayed within
+0.59 percent of the power integral in every window, median 0.18 percent).
+All 1344 windows measured in one session, 538,803 samples, 0 above the
+plausibility ceiling, 0 contaminated windows, 0 exactness exclusions
+(224 configurations), L2 40 MiB, weight sets 80, 20, 5, 2. Repetition CV of
+energy per call: median 1.05 percent, p90 2.0 percent, max 4.3 percent.
+Dense energy varies by at most 4.9 percent across the eight weight sets at
+fixed (d, B). 93 of 1344 windows capped (SwPowerCap), all large-batch GEMMs
+at d = 2048.
+
+**Census worked.** `torch.profiler` returned device events for every
+configuration (Linux CUPTI): 1 to 4 commands per call (72, 206, 115, 55 of
+the 448 configuration-realization pairs), kernel names recorded. cuBLAS runs
+many dense B = 1 calls as a split-K GEMV plus `splitKreduce` (2 commands)
+and the factorized form in 2 to 4 kernels. `census_fallback_used: false`;
+the analysis used measured counts.
+
+**Analysis.** `scripts/analyze_exp_002.py` at commit `e1358fc` (Ameera,
+committed with the run) and reproduced independently on a second machine
+from the committed run files (identical to floating point). Criteria v3:
+
+| ID | Result | Value |
+|----|--------|-------|
+| E1 | PASS | M1 selected (CV 0.121 vs M2 0.123); held-out median APE 0.081, p90 0.213, max 0.627; P0 0.450 |
+| E2 | FAIL | point rule 11 of 14 (threshold 12); misses (1024, 1) measured 293 vs predicted none_dense, (1024, 4) measured none_dense vs 54, (1024, 16) measured none_dense vs 92; interval overlap 4 of 14 |
+| E3 | FAIL | d = 1024: measured r*(B=1) = 292.7 (0.286 d) above d/4 = 256; model predicts none_dense |
+| E4 | FAIL | Spearman 0.667 at d = 1024 (threshold 0.7); d = 4096 reported 0.25 |
+| E5 | PASS | 0 excluded |
+| E6 | reported | summed regret 0.92 percent (FLOPs 0.95); per-cell mean 3.9 percent (FLOPs 5.2); wrong choices 12 vs 17 of 112; worst cell 88 percent for both |
+| E7 | PASS | 0 contaminated, 0 implausible |
+| E8 | FAIL | M3 point rule 11 of 14 |
+| E9 | reported | M3 held-out median APE 0.146 (M1 0.081) |
+| E10 | PASS | r*(B=1)/d 0.286 at 1024 (at most 0.30), 0.496 at 4096 (at least 0.45) |
+
+**H2a' on a100-sxm4-40gb: NOT SUPPORTED** (E2, E3, E4, E8 fail). No
+criterion was amended after the data were seen.
+
+Fitted coefficients, M1 on d in {512, 2048}: 1.170 mJ per command (1.168 to
+1.173), 40.0 pJ per MAC (39.9 to 40.1), 0.741 nJ per HBM word (0.738 to
+0.744); P0 55.7 pJ per MAC. M3 (registered for this platform): 13.2
+microseconds per command, 1071 GB/s, 7.37 TMAC/s (14.7 TFLOPS), floor 100.8 W,
+memory-bound 362.4 W, compute-bound 364.5 W, transition size 1883;
+calibration median APE 0.132 (energy), 0.192 (time).
+
+Measured crossover fraction r*/d (rows d, columns B = 1, 4, 16, 64, 256, 1024, 4096):
+512: dense always x4, 0.228, 0.446, 0.468;
+1024: 0.286, dense always, dense always, 0.203, 0.481, 0.438, 0.444;
+2048: 0.157, 0.334, 0.307, 0.378, 0.403, 0.523, 0.521;
+4096: 0.496, 0.456, 0.458, 0.475, 0.503, 0.444, 0.521.
+FLOPs (0.5 everywhere) is wrong at B = 1 by: dense always at 512 (no finite
+factor), 1.75x at 1024, 3.2x at 2048, 1.01x at 4096.
+
+**Predictions A1 to A7 (filed 2026-09-18, tag `exp-002-a100-predictions`), scored as filed:**
+
+- A1 HELD as registered (0.286 at most 0.30 at d = 1024; 0.496 at least 0.45
+  at d = 4096). The monotone wording "rises with d" does not hold across the
+  four sizes: the B = 1 column is dense always, 0.286, 0.157, 0.496.
+- A2 HELD: M3 transition size 1883 (filed range 1400 to 2800); r*/d at
+  (2048, 1) = 0.157 < 0.40; at (4096, 1) = 0.496 >= 0.45.
+- A3 FAILED: at B = 4096, r*/d = 0.468, 0.444, 0.521, 0.521; at d >= 2048
+  the factorized form at r = d/2 costs 4 to 5 percent LESS than dense
+  (dense 2048^3 kernel at the 400 W cap at 8.6 TFLOPS; at 4096 dense 19.0
+  TFLOPS at 381 W vs factorized at 353 W).
+- A4 FAILED on the middle clause: dense always at (512, 1) (clause met);
+  1.75x at (1024, 1) (clause requires at least 2x); 1.01x at (4096, 1)
+  (clause met).
+- A5 FAILED on the MAC term: 1.17 mJ per command (filed 0.5 to 2.0, met);
+  40.0 pJ per MAC (filed 5 to 10, failed); 0.74 nJ per word (filed 0.3 to
+  1.0, met). The filed MAC range ignored the datasheet: 400 W over 9.75
+  TMAC/s FP32 is 41 pJ per MAC. The laptop's 175 W over 11.8 TMAC/s is 14.8
+  pJ (fit 15.3). On both platforms a_c is power over FP32 throughput within
+  4 percent.
+- A6 FAILED on coverage: median APE 0.081 (at most 0.20, met); 11 of 14
+  within a factor of 1.5 (at least 12 required).
+- A7 HELD: counter passed C1 to C3 in EXP-001 (C3 0.0101) and is the
+  platform's energy source; EXP-002 confirms it window by window.
+
+Score: 3 of 7 held as filed (A1, A2, A7).
+
+### Observations (a100-sxm4-40gb)
+
+1. The B = 1 column is set by cuBLAS kernel selection, not by bytes alone.
+   d = 512: dense is one `gemvNSP` kernel, 25.9 us at 82 W (the gate's
+   launch floor is 9.9 us, so the kernel's own latency is the floor);
+   factorized is two such kernels, 38.7 us at 77 W; ratio 1.39 at every
+   rank. d = 1024: dense becomes split-K GEMV plus reduce (2 commands,
+   30.8 us at 130 W, 4.0 mJ) while factorized at small ranks runs three
+   kernels at floor power (30.6 to 43.8 us at 78 to 94 W, 2.9 to 3.4 mJ),
+   so factorized is 16 to 28 percent cheaper and r* = 0.286 d. d = 2048:
+   dense is one memory-bound `gemvx` kernel (16.8 us at 262 W, 1.0 TB/s,
+   4.4 mJ); factorized costs 3.4 to 3.7 mJ in three kernels for f <= 1/8,
+   then 6.1 and 8.8 mJ at f = 1/4 and 3/8 (four-kernel path, 60.8 us at
+   101 to 145 W), then 5.4 mJ in two kernels at f = 1/2 and 7.0 mJ at 3/4;
+   the ratio is not monotone in r and r* = 0.157 d marks the kernel
+   boundary. d = 4096: dense `gemvx` plus reduce, 58.5 us at 287 W (1.15
+   TB/s, 16.7 mJ); factorized at f = 1/16 4.5 mJ at 103 W (ratio 0.27 vs
+   FLOPs 0.125, latency-bound at floor power); the ratio meets the FLOPs
+   line at f = 1/4; r* = 0.496 d.
+2. At B = 4096 all sizes follow the FLOPs line; at d >= 2048 the
+   kernel-shape penalty has the opposite sign from the laptop's (factorized
+   at f = 1/2 cheaper by 4 to 5 percent), which is the failure of A3.
+3. M1 with measured command counts predicts held-out energy better on the
+   A100 (8.1 percent) than on the laptop with declared counts (12.4
+   percent). Its worst cells are again the small-rank factorized calls at
+   small batch (d = 1024, B = 4 and 16: 62 percent over), where three or
+   four kernels at floor power cost less than the additive per-command
+   energy.
+4. Coverage misses (point rule) are all three in the kernel-selection
+   corner d = 1024, B <= 16; all seven d = 4096 cells and (1024, B >= 64)
+   hit.
+5. The A100's coefficients against the laptop's: command 1.8x (1.17 vs
+   0.64 mJ; floor power 101 vs 46 W in the M3 fits), MAC 2.6x (40.0 vs
+   15.3 pJ; power over FP32 throughput on both), word 0.72x (0.74 vs 1.03
+   nJ; HBM2e vs GDDR6). A tiny call costs nearly the same energy on both
+   (EXP-001).
+6. Correction to the 2026-09-18 addendum: the leave-one-cell-out
+   cross-validation score for the laptop run was recorded there as 0.331
+   (M1) versus 0.338 (M2); the committed `analysis.json` of run
+   `20260915T180708`, reproduced on 2026-10-30, holds 0.152 versus 0.160
+   (same selection, M1). The file of record is the analysis output; the
+   earlier figure was from a superseded execution.
+
+### Interpretation (a100-sxm4-40gb)
+
+The structure the hypotheses were built on survives: the FLOPs rule fails
+at small d (by 1.75x to no finite factor at B = 1 for d <= 2048) and holds
+at large d and large B; the transition size from the launch floor and the
+bandwidth lands where filed; the three-term additive model calibrated on
+two shapes predicts the held-out grid at 8.1 percent and chooses better
+than FLOPs (12 vs 17 wrong of 112). What does not survive is H2a' as a
+smooth function of d with the dispatch floor as the only small-size
+mechanism: on the A100 the library's kernel choice at each shape sets the
+floor time, the power, and the command count, and the crossover map
+inherits its discontinuities. The measured census is what makes the model
+work there, and it marks the laptop's declared counts (one per GEMM) as a
+lower bound. Reported in the MLSys 2027 submission as it stands, failures
+included.
+
+### Artifacts (a100-sxm4-40gb)
+
+- `experiments/exp_002_lowrank-crossover/a100-sxm4-40gb/20261030T001246/`
+  (all results files, `samples/*.csv.gz`, `logs/run.log`; analysis.json
+  committed with the run and reproduced independently)
+- `paper/figures/*_a100.pdf`, `paper/figures/*_both.pdf`,
+  `paper/figures/heldout_scatter_row.pdf` from `scripts/paper_figures.py`

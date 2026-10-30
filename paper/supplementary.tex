@@ -1,0 +1,39 @@
+% Supplementary material (appendix) of the MLSys 2027 submission, compiled on
+% its own for the separate appendix upload. Same preamble as main.tex.
+\documentclass{article}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{hyperref}
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+\usepackage{mlsys2025}
+\mlsystitlerunning{Supplementary material: When FLOPs Point the Wrong Way}
+\newcommand{\aslot}[1]{\textcolor{red}{[A100: #1]}}
+\newcommand{\rstar}{r^{*}}
+\newcommand{\Efact}{E_{\mathrm{fact}}}
+\newcommand{\Edense}{E_{\mathrm{dense}}}
+\newcommand{\us}{\,\mu\mathrm{s}}
+
+\begin{document}
+
+\twocolumn[
+\mlsystitle{Supplementary Material: When FLOPs Point the Wrong Way: Pre-Registered Energy Crossovers for Low-Rank Inference on GPUs}
+\begin{mlsysauthorlist}
+\mlsysauthor{Anonymous Authors}{anon}
+\end{mlsysauthorlist}
+\mlsysaffiliation{anon}{Anonymous Institution, Anonymous City, Anonymous Country}
+\mlsyscorrespondingauthor{Anonymous Author}{anon.email@example.com}
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+Table and figure numbers below continue the main paper's numbering only within this document; cross-references to the main paper are by section.
+
+\input{appendix}
+
+\end{document}
